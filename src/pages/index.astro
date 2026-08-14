@@ -1,0 +1,448 @@
+---
+import '../styles/global.css';
+
+const SESSION_KEY = 'dcprime_planner_session';
+---
+
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    <title>대치프라임 플래너</title>
+    <meta name="robots" content="noindex, nofollow" />
+  </head>
+  <body class="min-h-screen bg-brand-light font-sans text-slate-800">
+    <!-- 로그인 화면 -->
+    <div id="login-screen" class="flex min-h-screen items-center justify-center px-4">
+      <div class="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
+        <h1 class="mb-1 text-center text-xl font-bold text-brand-dark">대치프라임 플래너</h1>
+        <p class="mb-6 text-center text-sm text-slate-500">4자리 PIN을 입력하세요</p>
+        <input
+          id="pin-input"
+          type="password"
+          inputmode="numeric"
+          maxlength="4"
+          placeholder="••••"
+          class="mb-3 w-full rounded-lg border border-slate-300 px-4 py-3 text-center text-2xl tracking-[0.5em] focus:border-brand focus:outline-none"
+        />
+        <p id="login-error" class="mb-3 hidden text-center text-sm text-red-500">PIN이 올바르지 않습니다.</p>
+        <button
+          id="login-btn"
+          class="w-full rounded-lg bg-brand py-3 font-semibold text-white transition hover:bg-brand-dark"
+        >
+          입장하기
+        </button>
+      </div>
+    </div>
+
+    <!-- 메인 화면 -->
+    <div id="app-screen" class="hidden min-h-screen pb-20">
+      <header class="sticky top-0 z-10 flex items-center justify-between bg-white px-4 py-3 shadow-sm">
+        <div>
+          <p class="text-sm text-slate-500">안녕하세요</p>
+          <p class="font-bold text-brand-dark"><span id="student-name"></span>님</p>
+        </div>
+        <button id="logout-btn" class="text-sm text-slate-400 underline">로그아웃</button>
+      </header>
+
+      <nav class="flex border-b border-slate-200 bg-white px-2">
+        <button data-tab="todos" class="tab-btn flex-1 border-b-2 border-brand py-3 text-sm font-semibold text-brand-dark">할일</button>
+        <button data-tab="study" class="tab-btn flex-1 border-b-2 border-transparent py-3 text-sm font-semibold text-slate-400">학습시간</button>
+        <button data-tab="goals" class="tab-btn flex-1 border-b-2 border-transparent py-3 text-sm font-semibold text-slate-400">목표</button>
+      </nav>
+
+      <main class="mx-auto max-w-2xl px-4 py-5">
+        <!-- 할일 탭 -->
+        <section id="tab-todos" class="tab-panel space-y-6">
+          <div>
+            <h2 class="mb-2 font-bold text-brand-dark">오늘 할일</h2>
+            <form id="daily-todo-form" class="mb-3 flex gap-2">
+              <input type="text" id="daily-todo-subject" placeholder="과목" list="subject-list" class="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
+              <input type="text" id="daily-todo-content" placeholder="할 일을 입력하세요" required class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+              <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">추가</button>
+            </form>
+            <ul id="daily-todo-list" class="space-y-2"></ul>
+          </div>
+
+          <div>
+            <h2 class="mb-2 font-bold text-brand-dark">이번주 할일</h2>
+            <form id="weekly-todo-form" class="mb-3 flex gap-2">
+              <input type="text" id="weekly-todo-subject" placeholder="과목" list="subject-list" class="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
+              <input type="text" id="weekly-todo-content" placeholder="이번주 목표를 입력하세요" required class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+              <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">추가</button>
+            </form>
+            <ul id="weekly-todo-list" class="space-y-2"></ul>
+          </div>
+        </section>
+
+        <!-- 학습시간 탭 -->
+        <section id="tab-study" class="tab-panel hidden space-y-6">
+          <div>
+            <h2 class="mb-2 font-bold text-brand-dark">학습시간 기록</h2>
+            <form id="study-log-form" class="mb-3 grid grid-cols-[1fr_1fr_auto_auto] gap-2">
+              <input type="date" id="study-log-date" required class="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
+              <input type="text" id="study-log-subject" placeholder="과목" list="subject-list" required class="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
+              <input type="number" id="study-log-minutes" placeholder="분" min="1" required class="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
+              <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">기록</button>
+            </form>
+            <input type="text" id="study-log-memo" placeholder="메모 (선택)" class="mb-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+          </div>
+          <div>
+            <h3 class="mb-2 text-sm font-semibold text-slate-500">오늘 과목별 학습시간</h3>
+            <ul id="study-today-summary" class="mb-4 flex flex-wrap gap-2"></ul>
+          </div>
+          <div>
+            <h3 class="mb-2 text-sm font-semibold text-slate-500">최근 기록</h3>
+            <ul id="study-log-list" class="space-y-2"></ul>
+          </div>
+        </section>
+
+        <!-- 목표 탭 -->
+        <section id="tab-goals" class="tab-panel hidden space-y-4">
+          <h2 class="font-bold text-brand-dark">목표 / D-Day</h2>
+          <form id="goal-form" class="space-y-2 rounded-xl bg-white p-4 shadow-sm">
+            <input type="text" id="goal-title" placeholder="목표 (예: 9월 모의고사)" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+            <div class="flex gap-2">
+              <input type="date" id="goal-date" required class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+              <input type="text" id="goal-category" placeholder="분류 (선택)" class="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+            </div>
+            <button type="submit" class="w-full rounded-lg bg-brand py-2 text-sm font-semibold text-white">목표 추가</button>
+          </form>
+          <ul id="goal-list" class="space-y-2"></ul>
+        </section>
+      </main>
+    </div>
+
+    <datalist id="subject-list">
+      <option value="국어"></option>
+      <option value="영어"></option>
+      <option value="수학"></option>
+      <option value="과학"></option>
+      <option value="사탐"></option>
+      <option value="과탐"></option>
+      <option value="기타"></option>
+    </datalist>
+
+    <script>
+      import { planner } from '../lib/supabase';
+
+      const SESSION_KEY = 'dcprime_planner_session';
+
+      type Session = { id: string; name: string; grade: string | null };
+
+      function getSession(): Session | null {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        return raw ? JSON.parse(raw) : null;
+      }
+
+      function todayStr() {
+        const d = new Date();
+        return d.toISOString().slice(0, 10);
+      }
+
+      function weekStartStr() {
+        const d = new Date();
+        const day = d.getDay(); // 0=일
+        const diff = day === 0 ? -6 : 1 - day; // 이번주 월요일
+        d.setDate(d.getDate() + diff);
+        return d.toISOString().slice(0, 10);
+      }
+
+      function escHtml(str: string) {
+        return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      // ── 로그인 ──
+      function showApp(session: Session) {
+        document.getElementById('login-screen')!.classList.add('hidden');
+        document.getElementById('app-screen')!.classList.remove('hidden');
+        document.getElementById('student-name')!.textContent = session.name;
+        loadTodos();
+        loadStudy();
+        loadGoals();
+      }
+
+      function showLogin() {
+        document.getElementById('login-screen')!.classList.remove('hidden');
+        document.getElementById('app-screen')!.classList.add('hidden');
+      }
+
+      document.getElementById('login-btn')?.addEventListener('click', async () => {
+        const pinInput = document.getElementById('pin-input') as HTMLInputElement;
+        const pin = pinInput.value.trim();
+        const errorEl = document.getElementById('login-error')!;
+        if (!/^\d{4}$/.test(pin)) {
+          errorEl.classList.remove('hidden');
+          return;
+        }
+        const { data, error } = await planner.rpc('verify_pin', { p_pin: pin });
+        if (!error && data && data.length > 0) {
+          const student = data[0];
+          const session: Session = { id: student.id, name: student.name, grade: student.grade };
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+          errorEl.classList.add('hidden');
+          pinInput.value = '';
+          showApp(session);
+        } else {
+          errorEl.classList.remove('hidden');
+        }
+      });
+
+      document.getElementById('pin-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') (document.getElementById('login-btn') as HTMLButtonElement).click();
+      });
+
+      document.getElementById('logout-btn')?.addEventListener('click', () => {
+        sessionStorage.removeItem(SESSION_KEY);
+        showLogin();
+      });
+
+      // ── 탭 전환 ──
+      document.querySelectorAll('.tab-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const tab = (btn as HTMLElement).dataset.tab;
+          document.querySelectorAll('.tab-btn').forEach((b) => {
+            b.classList.remove('border-brand', 'text-brand-dark');
+            b.classList.add('border-transparent', 'text-slate-400');
+          });
+          btn.classList.add('border-brand', 'text-brand-dark');
+          btn.classList.remove('border-transparent', 'text-slate-400');
+          document.querySelectorAll('.tab-panel').forEach((p) => p.classList.add('hidden'));
+          document.getElementById(`tab-${tab}`)?.classList.remove('hidden');
+        });
+      });
+
+      // ── 할일 ──
+      async function loadTodos() {
+        const session = getSession();
+        if (!session) return;
+        const { data: daily } = await planner
+          .from('todos')
+          .select('*')
+          .eq('student_id', session.id)
+          .eq('scope', 'daily')
+          .eq('item_date', todayStr())
+          .order('sort_order');
+        renderTodoList('daily-todo-list', daily ?? []);
+
+        const { data: weekly } = await planner
+          .from('todos')
+          .select('*')
+          .eq('student_id', session.id)
+          .eq('scope', 'weekly')
+          .eq('item_date', weekStartStr())
+          .order('sort_order');
+        renderTodoList('weekly-todo-list', weekly ?? []);
+      }
+
+      function renderTodoList(elId: string, items: any[]) {
+        const el = document.getElementById(elId)!;
+        if (items.length === 0) {
+          el.innerHTML = '<li class="text-sm text-slate-400">아직 등록된 항목이 없어요.</li>';
+          return;
+        }
+        el.innerHTML = items
+          .map(
+            (t) => `
+          <li class="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-sm">
+            <input type="checkbox" data-id="${t.id}" class="todo-check h-4 w-4 accent-brand" ${t.is_done ? 'checked' : ''} />
+            <span class="flex-1 text-sm ${t.is_done ? 'text-slate-400 line-through' : ''}">
+              ${t.subject ? `<span class="mr-1 rounded bg-brand-light px-1.5 py-0.5 text-xs text-brand-dark">${escHtml(t.subject)}</span>` : ''}${escHtml(t.content)}
+            </span>
+            <button data-id="${t.id}" class="todo-delete text-xs text-slate-300 hover:text-red-400">삭제</button>
+          </li>`
+          )
+          .join('');
+      }
+
+      document.body.addEventListener('change', async (e) => {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains('todo-check')) {
+          const id = (target as HTMLInputElement).dataset.id!;
+          const checked = (target as HTMLInputElement).checked;
+          await planner.from('todos').update({ is_done: checked }).eq('id', id);
+        }
+      });
+
+      document.body.addEventListener('click', async (e) => {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains('todo-delete')) {
+          const id = target.dataset.id!;
+          await planner.from('todos').delete().eq('id', id);
+          loadTodos();
+        }
+        if (target.classList.contains('goal-delete')) {
+          const id = target.dataset.id!;
+          await planner.from('goals').delete().eq('id', id);
+          loadGoals();
+        }
+      });
+
+      document.getElementById('daily-todo-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const session = getSession();
+        if (!session) return;
+        const subject = (document.getElementById('daily-todo-subject') as HTMLInputElement).value.trim();
+        const contentEl = document.getElementById('daily-todo-content') as HTMLInputElement;
+        const content = contentEl.value.trim();
+        if (!content) return;
+        await planner.from('todos').insert({
+          student_id: session.id,
+          scope: 'daily',
+          item_date: todayStr(),
+          subject: subject || null,
+          content,
+        });
+        contentEl.value = '';
+        loadTodos();
+      });
+
+      document.getElementById('weekly-todo-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const session = getSession();
+        if (!session) return;
+        const subject = (document.getElementById('weekly-todo-subject') as HTMLInputElement).value.trim();
+        const contentEl = document.getElementById('weekly-todo-content') as HTMLInputElement;
+        const content = contentEl.value.trim();
+        if (!content) return;
+        await planner.from('todos').insert({
+          student_id: session.id,
+          scope: 'weekly',
+          item_date: weekStartStr(),
+          subject: subject || null,
+          content,
+        });
+        contentEl.value = '';
+        loadTodos();
+      });
+
+      // ── 학습시간 ──
+      async function loadStudy() {
+        const session = getSession();
+        if (!session) return;
+
+        const { data: todayLogs } = await planner
+          .from('study_logs')
+          .select('subject, minutes')
+          .eq('student_id', session.id)
+          .eq('log_date', todayStr());
+        const bySubject: Record<string, number> = {};
+        (todayLogs ?? []).forEach((l: any) => {
+          const key = l.subject || '기타';
+          bySubject[key] = (bySubject[key] ?? 0) + l.minutes;
+        });
+        const summaryEl = document.getElementById('study-today-summary')!;
+        const entries = Object.entries(bySubject);
+        summaryEl.innerHTML = entries.length
+          ? entries
+              .map(([subj, min]) => `<li class="rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand-dark">${escHtml(subj)} ${min}분</li>`)
+              .join('')
+          : '<li class="text-sm text-slate-400">오늘 기록이 없어요.</li>';
+
+        const { data: recent } = await planner
+          .from('study_logs')
+          .select('*')
+          .eq('student_id', session.id)
+          .order('log_date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(10);
+        const listEl = document.getElementById('study-log-list')!;
+        listEl.innerHTML = (recent ?? []).length
+          ? recent!
+              .map(
+                (l: any) => `
+            <li class="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm shadow-sm">
+              <span>${l.log_date} · ${l.subject ? escHtml(l.subject) : '기타'} · ${l.minutes}분${l.memo ? ` · ${escHtml(l.memo)}` : ''}</span>
+            </li>`
+              )
+              .join('')
+          : '<li class="text-sm text-slate-400">아직 기록이 없어요.</li>';
+      }
+
+      document.getElementById('study-log-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const session = getSession();
+        if (!session) return;
+        const date = (document.getElementById('study-log-date') as HTMLInputElement).value;
+        const subject = (document.getElementById('study-log-subject') as HTMLInputElement).value.trim();
+        const minutesEl = document.getElementById('study-log-minutes') as HTMLInputElement;
+        const memoEl = document.getElementById('study-log-memo') as HTMLInputElement;
+        const minutes = parseInt(minutesEl.value, 10);
+        if (!date || !minutes) return;
+        await planner.from('study_logs').insert({
+          student_id: session.id,
+          log_date: date,
+          subject: subject || null,
+          minutes,
+          memo: memoEl.value.trim() || null,
+        });
+        minutesEl.value = '';
+        memoEl.value = '';
+        loadStudy();
+      });
+
+      // ── 목표 ──
+      function dDayLabel(targetDate: string) {
+        const today = new Date(todayStr());
+        const target = new Date(targetDate);
+        const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
+        if (diff === 0) return 'D-DAY';
+        return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
+      }
+
+      async function loadGoals() {
+        const session = getSession();
+        if (!session) return;
+        const { data } = await planner
+          .from('goals')
+          .select('*')
+          .eq('student_id', session.id)
+          .eq('is_active', true)
+          .order('target_date', { ascending: true });
+        const el = document.getElementById('goal-list')!;
+        el.innerHTML = (data ?? []).length
+          ? data!
+              .map(
+                (g: any) => `
+            <li class="flex items-center gap-3 rounded-xl bg-white p-4 shadow-sm">
+              <span class="rounded-lg bg-brand px-2 py-1 text-xs font-bold text-white">${dDayLabel(g.target_date)}</span>
+              <div class="flex-1">
+                <p class="font-semibold">${escHtml(g.title)}</p>
+                <p class="text-xs text-slate-400">${g.target_date}${g.category ? ` · ${escHtml(g.category)}` : ''}</p>
+              </div>
+              <button data-id="${g.id}" class="goal-delete text-xs text-slate-300 hover:text-red-400">삭제</button>
+            </li>`
+              )
+              .join('')
+          : '<li class="text-sm text-slate-400">등록된 목표가 없어요.</li>';
+      }
+
+      document.getElementById('goal-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const session = getSession();
+        if (!session) return;
+        const titleEl = document.getElementById('goal-title') as HTMLInputElement;
+        const dateEl = document.getElementById('goal-date') as HTMLInputElement;
+        const categoryEl = document.getElementById('goal-category') as HTMLInputElement;
+        if (!titleEl.value.trim() || !dateEl.value) return;
+        await planner.from('goals').insert({
+          student_id: session.id,
+          title: titleEl.value.trim(),
+          target_date: dateEl.value,
+          category: categoryEl.value.trim() || null,
+        });
+        titleEl.value = '';
+        dateEl.value = '';
+        categoryEl.value = '';
+        loadGoals();
+      });
+
+      // ── 초기화 ──
+      (document.getElementById('study-log-date') as HTMLInputElement).value = todayStr();
+      const existing = getSession();
+      if (existing) showApp(existing);
+    </script>
+  </body>
+</html>

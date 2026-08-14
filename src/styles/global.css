@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+@theme {
+  /* 대치프라임 브랜드 컬러와 통일 */
+  --color-brand: #747ba2;
+  --color-brand-dark: #565d82;
+  --color-brand-light: #f0f1f7;
+
+  --font-sans: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+}
