@@ -44,7 +44,12 @@ const SESSION_KEY = 'dcprime_planner_session';
           <p class="text-sm text-slate-500">안녕하세요</p>
           <p class="font-bold text-brand-dark"><span id="student-name"></span>님</p>
         </div>
-        <button id="logout-btn" class="text-sm text-slate-400 underline">로그아웃</button>
+        <button id="logout-btn" class="hidden text-sm text-slate-400 underline sm:block">로그아웃</button>
+        <button id="mobile-menu-btn" aria-label="메뉴" class="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 active:bg-brand-light sm:hidden">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
       </header>
 
       <nav class="border-b border-slate-200 bg-white">
@@ -56,20 +61,16 @@ const SESSION_KEY = 'dcprime_planner_session';
           <button data-tab="goals" class="tab-btn flex-1 border-b-2 border-transparent py-3 text-sm font-semibold text-slate-400">목표</button>
         </div>
 
-        <!-- 햄버거 메뉴 (모바일 전용) -->
-        <div class="flex items-center justify-between px-4 py-3 sm:hidden">
-          <span id="current-tab-label" class="text-sm font-bold text-brand-dark">할일</span>
-          <button id="mobile-menu-btn" aria-label="메뉴" class="-mr-2 flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 active:bg-brand-light">
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
+        <!-- 현재 탭 표시 (모바일 전용, 햄버거 버튼은 헤더 우측으로 이동) -->
+        <div id="current-tab-label" class="px-4 py-3 text-sm font-bold text-brand-dark sm:hidden">할일</div>
+
         <div id="mobile-menu" class="hidden border-t border-slate-100 px-2 pb-2 sm:hidden">
           <button data-tab="todos" class="mobile-tab-btn block w-full rounded-lg bg-brand-light px-3 py-2.5 text-left text-sm font-semibold text-brand-dark">할일</button>
           <button data-tab="timetable" class="mobile-tab-btn block w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-500">시간표</button>
           <button data-tab="study" class="mobile-tab-btn block w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-500">학습시간</button>
           <button data-tab="goals" class="mobile-tab-btn block w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-500">목표</button>
+          <div class="my-1 border-t border-slate-100"></div>
+          <button id="mobile-logout-btn" class="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-red-400">로그아웃</button>
         </div>
       </nav>
 
@@ -99,10 +100,28 @@ const SESSION_KEY = 'dcprime_planner_session';
 
         <!-- 시간표 탭 -->
         <section id="tab-timetable" class="tab-panel hidden space-y-4">
-          <h2 class="font-bold text-brand-dark">정규반 시간표</h2>
-          <p class="text-xs text-slate-400">고2·3 정규반 기준 · 학원 시간표 변경 시 자동 반영</p>
-          <div id="timetable-loading" class="rounded-xl bg-white p-4 text-center text-sm text-slate-400 shadow-sm">불러오는 중...</div>
-          <div id="timetable-list" class="space-y-6"></div>
+          <h2 class="font-bold text-brand-dark">나의 시간표</h2>
+          <form id="timetable-form" class="space-y-2 rounded-xl bg-white p-4 shadow-sm">
+            <div class="flex gap-2">
+              <select id="timetable-day" class="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none">
+                <option value="0">월</option>
+                <option value="1">화</option>
+                <option value="2">수</option>
+                <option value="3">목</option>
+                <option value="4">금</option>
+                <option value="5">토</option>
+                <option value="6">일</option>
+              </select>
+              <input type="time" id="timetable-start" required class="flex-1 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
+              <input type="time" id="timetable-end" class="flex-1 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
+            </div>
+            <div class="flex gap-2">
+              <input type="text" id="timetable-subject" placeholder="과목" list="subject-list" class="w-24 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
+              <input type="text" id="timetable-content" placeholder="내용 (예: 수학 학원, 자습)" required class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+            </div>
+            <button type="submit" class="w-full rounded-lg bg-brand py-2 text-sm font-semibold text-white">시간표에 추가</button>
+          </form>
+          <div id="timetable-list" class="space-y-4"></div>
         </section>
 
         <!-- 학습시간 탭 -->
@@ -222,10 +241,14 @@ const SESSION_KEY = 'dcprime_planner_session';
         if (e.key === 'Enter') (document.getElementById('login-btn') as HTMLButtonElement).click();
       });
 
-      document.getElementById('logout-btn')?.addEventListener('click', () => {
+      function doLogout() {
         sessionStorage.removeItem(SESSION_KEY);
+        document.getElementById('mobile-menu')!.classList.add('hidden');
         showLogin();
-      });
+      }
+
+      document.getElementById('logout-btn')?.addEventListener('click', doLogout);
+      document.getElementById('mobile-logout-btn')?.addEventListener('click', doLogout);
 
       // ── 탭 전환 (데스크톱 탭 바 + 모바일 햄버거 메뉴 공용) ──
       const TAB_LABELS: Record<string, string> = { todos: '할일', timetable: '시간표', study: '학습시간', goals: '목표' };
@@ -323,6 +346,11 @@ const SESSION_KEY = 'dcprime_planner_session';
           await planner.from('goals').delete().eq('id', id);
           loadGoals();
         }
+        if (target.classList.contains('timetable-delete')) {
+          const id = target.dataset.id!;
+          await planner.from('timetable_entries').delete().eq('id', id);
+          loadTimetable();
+        }
       });
 
       document.getElementById('daily-todo-form')?.addEventListener('submit', async (e) => {
@@ -363,79 +391,85 @@ const SESSION_KEY = 'dcprime_planner_session';
         loadTodos();
       });
 
-      // ── 시간표 (구글시트 → xlsx 내보내기 → 클라이언트 파싱, curriculum.astro와 동일한 소스) ──
-      const TIMETABLE_SHEET_ID = '1ktrfPNbLn5dmBawtAXBag0kwFHRpYdK7cP10Ac6CR5Y';
-      const TIMETABLE_SHEET_NAMES: Record<string, string> = { korean: '국어', english: '영어', math: '수학', science: '과학' };
-      const TIMETABLE_TARGET_GROUPS = ['고2·3', '고등']; // 플래너는 고2/3 대상이라 해당 구분만 노출
-      let timetableLoaded = false;
+      // ── 시간표 (학생이 직접 등록하는 개인 시간표) ──
+      const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
 
-      async function loadXlsxLib() {
-        if ((window as any).XLSX) return;
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
-          script.onload = () => resolve();
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
-
-      function renderTimetableCard(subject: string, rows: any[][]) {
-        const items = rows
-          .map((r) => {
-            const [, grade, className, time, teacher, book] = r;
-            const nameLabel = [grade, className].filter(Boolean).join(' ');
-            return `
-            <div class="border-b border-slate-100 py-3 last:border-b-0">
-              <div class="flex items-baseline justify-between gap-3">
-                <p class="text-sm font-bold text-slate-800">${escHtml(nameLabel)}</p>
-                <p class="whitespace-nowrap text-xs text-slate-400">${escHtml(time)}</p>
-              </div>
-              ${teacher ? `<p class="mt-0.5 text-xs text-slate-400">${escHtml(teacher)}</p>` : ''}
-              ${book ? `<p class="mt-1 text-xs leading-relaxed text-slate-500">${escHtml(book)}</p>` : ''}
-            </div>`;
-          })
-          .join('');
-        return `
-          <div class="rounded-xl bg-white p-4 shadow-sm">
-            <span class="mb-1 inline-block rounded bg-brand-light px-1.5 py-0.5 text-xs font-semibold text-brand-dark">${escHtml(subject)}</span>
-            ${items}
-          </div>`;
+      function fmtTimeRange(start: string, end: string | null) {
+        const s = start.slice(0, 5);
+        return end ? `${s} - ${end.slice(0, 5)}` : s;
       }
 
       async function loadTimetable() {
-        if (timetableLoaded) return;
-        const loadingEl = document.getElementById('timetable-loading')!;
-        const listEl = document.getElementById('timetable-list')!;
-        try {
-          await loadXlsxLib();
-          const res = await fetch(`https://docs.google.com/spreadsheets/d/${TIMETABLE_SHEET_ID}/export?format=xlsx`);
-          if (!res.ok) throw new Error('sheet fetch failed');
-          const buf = await res.arrayBuffer();
-          const XLSX = (window as any).XLSX;
-          const wb = XLSX.read(buf, { type: 'array' });
-
-          const cards: string[] = [];
-          Object.entries(TIMETABLE_SHEET_NAMES).forEach(([, sheetLabel]) => {
-            const sheet = wb.Sheets[sheetLabel];
-            if (!sheet) return;
-            const rows: any[][] = XLSX.utils
-              .sheet_to_json(sheet, { header: 1 })
-              .slice(1)
-              .filter((r: any[]) => r.some((c) => c !== undefined && c !== ''))
-              .filter((r: any[]) => TIMETABLE_TARGET_GROUPS.includes(String(r[0] ?? '').trim()));
-            if (rows.length > 0) cards.push(renderTimetableCard(sheetLabel, rows));
-          });
-
-          loadingEl.classList.add('hidden');
-          listEl.innerHTML = cards.length
-            ? cards.join('')
-            : '<p class="rounded-xl bg-white p-4 text-center text-sm text-slate-400 shadow-sm">등록된 시간표가 없어요.</p>';
-          timetableLoaded = true;
-        } catch {
-          loadingEl.textContent = '시간표를 불러오지 못했어요. 잠시 후 다시 시도해주세요.';
+        const session = getSession();
+        if (!session) return;
+        const { data } = await planner
+          .from('timetable_entries')
+          .select('*')
+          .eq('student_id', session.id)
+          .order('day_of_week')
+          .order('start_time');
+        const el = document.getElementById('timetable-list')!;
+        const items = data ?? [];
+        if (items.length === 0) {
+          el.innerHTML = '<p class="rounded-xl bg-white p-4 text-center text-sm text-slate-400 shadow-sm">아직 등록된 시간표가 없어요.</p>';
+          return;
         }
+        const byDay = new Map<number, any[]>();
+        items.forEach((it: any) => {
+          if (!byDay.has(it.day_of_week)) byDay.set(it.day_of_week, []);
+          byDay.get(it.day_of_week)!.push(it);
+        });
+        el.innerHTML = [...byDay.keys()]
+          .sort((a, b) => a - b)
+          .map((day) => {
+            const rows = byDay
+              .get(day)!
+              .map(
+                (it) => `
+              <div class="flex items-center justify-between gap-3 border-b border-slate-100 py-2.5 last:border-b-0">
+                <div>
+                  <p class="text-sm font-semibold text-slate-800">
+                    ${it.subject ? `<span class="mr-1 rounded bg-brand-light px-1.5 py-0.5 text-xs text-brand-dark">${escHtml(it.subject)}</span>` : ''}${escHtml(it.content)}
+                  </p>
+                  <p class="mt-0.5 text-xs text-slate-400">${fmtTimeRange(it.start_time, it.end_time)}</p>
+                </div>
+                <button data-id="${it.id}" class="timetable-delete text-xs text-slate-300 hover:text-red-400">삭제</button>
+              </div>`
+              )
+              .join('');
+            return `
+              <div class="rounded-xl bg-white p-4 shadow-sm">
+                <h3 class="mb-1 text-sm font-bold text-brand-dark">${DAY_LABELS[day]}요일</h3>
+                ${rows}
+              </div>`;
+          })
+          .join('');
       }
+
+      document.getElementById('timetable-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const session = getSession();
+        if (!session) return;
+        const dayEl = document.getElementById('timetable-day') as HTMLSelectElement;
+        const startEl = document.getElementById('timetable-start') as HTMLInputElement;
+        const endEl = document.getElementById('timetable-end') as HTMLInputElement;
+        const subjectEl = document.getElementById('timetable-subject') as HTMLInputElement;
+        const contentEl = document.getElementById('timetable-content') as HTMLInputElement;
+        if (!startEl.value || !contentEl.value.trim()) return;
+        await planner.from('timetable_entries').insert({
+          student_id: session.id,
+          day_of_week: parseInt(dayEl.value, 10),
+          start_time: startEl.value,
+          end_time: endEl.value || null,
+          subject: subjectEl.value.trim() || null,
+          content: contentEl.value.trim(),
+        });
+        startEl.value = '';
+        endEl.value = '';
+        subjectEl.value = '';
+        contentEl.value = '';
+        loadTimetable();
+      });
 
       // ── 학습시간 ──
       async function loadStudy() {

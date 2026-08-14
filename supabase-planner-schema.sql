@@ -145,3 +145,24 @@ create policy "anon all goals" on planner.goals
 grant select, insert, update, delete on planner.goals to anon;
 
 create index if not exists idx_goals_student on planner.goals(student_id, is_active, target_date);
+
+-- ────────────────────────────────────────────
+-- 6. timetable_entries (학생이 직접 등록하는 개인 시간표)
+-- ────────────────────────────────────────────
+create table if not exists planner.timetable_entries (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null references planner.students(id) on delete cascade,
+  day_of_week smallint not null check (day_of_week between 0 and 6), -- 0=월 ... 6=일
+  start_time time not null,
+  end_time time,
+  subject text,
+  content text not null,
+  created_at timestamptz not null default now()
+);
+alter table planner.timetable_entries enable row level security;
+drop policy if exists "anon all timetable_entries" on planner.timetable_entries;
+create policy "anon all timetable_entries" on planner.timetable_entries
+  for all to anon using (true) with check (true);
+grant select, insert, update, delete on planner.timetable_entries to anon;
+
+create index if not exists idx_timetable_entries_student on planner.timetable_entries(student_id, day_of_week, start_time);
