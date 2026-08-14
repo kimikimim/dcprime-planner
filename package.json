@@ -15,12 +15,15 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.0",
-    "@tailwindcss/vite": "^4.2.4",
-    "astro": "^6.1.8"
+    "@tailwindcss/vite": "4.2.4",
+    "astro": "6.1.8"
   },
   "devDependencies": {
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.10",
-    "tailwindcss": "^4.2.4"
+    "tailwindcss": "4.2.4"
+  },
+  "overrides": {
+    "vite": "7.3.6"
   }
 }
