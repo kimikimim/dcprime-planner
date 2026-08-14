@@ -105,7 +105,7 @@ const SESSION_KEY = 'dcprime_planner_session';
             <h2 class="mb-2 font-bold text-brand-dark">오늘 할일</h2>
             <form id="daily-todo-form" class="mb-3 flex gap-2">
               <input type="text" id="daily-todo-subject" placeholder="과목" list="subject-list" class="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
-              <input type="text" id="daily-todo-content" placeholder="할 일을 입력하세요" required class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+              <input type="text" id="daily-todo-content" placeholder="할 일을 입력하세요" required class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
               <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">추가</button>
             </form>
             <ul id="daily-todo-list" class="space-y-2"></ul>
@@ -115,7 +115,7 @@ const SESSION_KEY = 'dcprime_planner_session';
             <h2 class="mb-2 font-bold text-brand-dark">이번주 할일</h2>
             <form id="weekly-todo-form" class="mb-3 flex gap-2">
               <input type="text" id="weekly-todo-subject" placeholder="과목" list="subject-list" class="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
-              <input type="text" id="weekly-todo-content" placeholder="이번주 목표를 입력하세요" required class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+              <input type="text" id="weekly-todo-content" placeholder="이번주 목표를 입력하세요" required class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
               <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">추가</button>
             </form>
             <ul id="weekly-todo-list" class="space-y-2"></ul>
@@ -140,9 +140,9 @@ const SESSION_KEY = 'dcprime_planner_session';
         <section id="tab-study" class="tab-panel hidden space-y-6">
           <div>
             <h2 class="mb-2 font-bold text-brand-dark">학습시간 기록</h2>
-            <form id="study-log-form" class="mb-3 grid grid-cols-[1fr_1fr_auto_auto] gap-2">
-              <input type="date" id="study-log-date" required class="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
-              <input type="text" id="study-log-subject" placeholder="과목" list="subject-list" required class="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
+            <form id="study-log-form" class="mb-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] gap-2">
+              <input type="date" id="study-log-date" required class="min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
+              <input type="text" id="study-log-subject" placeholder="과목" list="subject-list" required class="min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
               <input type="number" id="study-log-minutes" placeholder="분" min="1" required class="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
               <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">기록</button>
             </form>
@@ -164,7 +164,7 @@ const SESSION_KEY = 'dcprime_planner_session';
           <form id="goal-form" class="space-y-2 rounded-xl bg-white p-4 shadow-sm">
             <input type="text" id="goal-title" placeholder="목표 (예: 9월 모의고사)" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
             <div class="flex gap-2">
-              <input type="date" id="goal-date" required class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+              <input type="date" id="goal-date" required class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
               <input type="text" id="goal-category" placeholder="분류 (선택)" class="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
             </div>
             <button type="submit" class="w-full rounded-lg bg-brand py-2 text-sm font-semibold text-white">목표 추가</button>
