@@ -18,16 +18,6 @@ const SESSION_KEY = 'dcprime_planner_session';
       /* is:global 필요: 그리드/범례 셀은 클라이언트 JS가 innerHTML로 그려서 Astro의 스코프드 CSS(data-astro-cid) 대상이 아님 */
       .tt-datebar { text-align: center; margin-bottom: 14px; }
       .tt-date { font-size: 16px; font-weight: 700; color: #1f2430; }
-      .tt-setup { display: flex; gap: 10px; margin-bottom: 16px; }
-      .tt-field { flex: 1; background: #f5f6fa; border-radius: 11px; padding: 10px 12px; }
-      .tt-label { display: block; font-size: 12px; color: #8b92a4; font-weight: 600; margin-bottom: 7px; }
-      .tt-campus { display: flex; gap: 6px; }
-      .tt-campus-btn { flex: 1; border: 1px solid #e2e5ee; background: #fff; border-radius: 8px; padding: 7px 0; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; }
-      .tt-campus-btn.sel { background: #3b82f6; border-color: #3b82f6; color: #fff; }
-      .tt-seatwrap { display: flex; align-items: center; gap: 6px; }
-      .tt-seat { width: 100%; border: 1px solid #e2e5ee; border-radius: 8px; padding: 7px 10px; font-size: 14px; outline: none; }
-      .tt-seat:focus { border-color: #3b82f6; }
-      .tt-seatwrap span { font-size: 13px; color: #8b92a4; }
       .tt-submit { width: 100%; margin-top: 4px; background: #3b82f6; color: #fff; border: none; border-radius: 11px; padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; }
       .tt-submit.done { background: #10b981; }
       .tt-legend { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; margin-bottom: 16px; }
@@ -136,20 +126,6 @@ const SESSION_KEY = 'dcprime_planner_session';
         <section id="tab-timetable" class="tab-panel hidden">
           <div class="tt-datebar">
             <div class="tt-date" id="tt-date">날짜</div>
-          </div>
-
-          <div class="tt-setup">
-            <div class="tt-field">
-              <span class="tt-label">스터디카페</span>
-              <div class="tt-campus">
-                <button type="button" class="tt-campus-btn" data-campus="능곡">능곡</button>
-                <button type="button" class="tt-campus-btn" data-campus="장곡">장곡</button>
-              </div>
-            </div>
-            <div class="tt-field">
-              <span class="tt-label">좌석</span>
-              <div class="tt-seatwrap"><input id="tt-seat" class="tt-seat" type="number" min="1" inputmode="numeric" placeholder="번호" /><span>번</span></div>
-            </div>
           </div>
 
           <div class="tt-legend" id="tt-legend"></div>
@@ -438,12 +414,7 @@ const SESSION_KEY = 'dcprime_planner_session';
       }
 
       let ttSel = '스카';
-      let ttRow: { slots: Record<string, string>; campus: string | null; seat: string; submitted: boolean } = {
-        slots: {},
-        campus: null,
-        seat: '',
-        submitted: false,
-      };
+      let ttRow: { slots: Record<string, string>; submitted: boolean } = { slots: {}, submitted: false };
       let ttInited = false;
 
       function ttYmd(d: Date) {
@@ -460,11 +431,11 @@ const SESSION_KEY = 'dcprime_planner_session';
 
       async function ttLoadDay(studentId: string) {
         const { data } = await planner.from('timetables').select('*').eq('student_id', studentId).eq('date', TT_TODAY).maybeSingle();
-        if (data) ttRow = { slots: data.slots || {}, campus: data.campus, seat: data.seat || '', submitted: !!data.submitted };
+        if (data) ttRow = { slots: data.slots || {}, submitted: !!data.submitted };
       }
 
       async function ttPersist(studentId: string, extra?: Record<string, unknown>) {
-        const payload = { student_id: studentId, date: TT_TODAY, slots: ttRow.slots, campus: ttRow.campus, seat: ttRow.seat, submitted: ttRow.submitted, ...(extra || {}) };
+        const payload = { student_id: studentId, date: TT_TODAY, slots: ttRow.slots, submitted: ttRow.submitted, ...(extra || {}) };
         const { error } = await planner.from('timetables').upsert(payload, { onConflict: 'student_id,date' });
         if (error) console.error('시간표 저장 오류', error);
       }
@@ -485,9 +456,6 @@ const SESSION_KEY = 'dcprime_planner_session';
       }
 
       function ttRenderSetup() {
-        document.querySelectorAll('.tt-campus-btn').forEach((b) => b.classList.toggle('sel', (b as HTMLElement).dataset.campus === ttRow.campus));
-        const seatEl = document.getElementById('tt-seat') as HTMLInputElement;
-        if (ttRow.seat != null) seatEl.value = ttRow.seat;
         const submitBtn = document.getElementById('tt-submit')!;
         if (ttRow.submitted) {
           submitBtn.textContent = '제출 완료 ✓ (다시 제출하기)';
@@ -560,28 +528,7 @@ const SESSION_KEY = 'dcprime_planner_session';
 
         if (!ttInited) {
           ttInited = true;
-          document.querySelectorAll('.tt-campus-btn').forEach((b) =>
-            b.addEventListener('click', () => {
-              ttRow.campus = (b as HTMLElement).dataset.campus!;
-              ttRenderSetup();
-              ttPersist(session.id);
-            })
-          );
-          let seatTimer: ReturnType<typeof setTimeout>;
-          document.getElementById('tt-seat')?.addEventListener('input', (e) => {
-            ttRow.seat = (e.target as HTMLInputElement).value;
-            clearTimeout(seatTimer);
-            seatTimer = setTimeout(() => ttPersist(session.id), 400);
-          });
           document.getElementById('tt-submit')?.addEventListener('click', async () => {
-            if (!ttRow.campus) {
-              alert('스터디카페(능곡/장곡)를 선택해주세요.');
-              return;
-            }
-            if (!(document.getElementById('tt-seat') as HTMLInputElement).value) {
-              alert('좌석 번호를 입력해주세요.');
-              return;
-            }
             ttRow.submitted = true;
             await ttPersist(session.id, { submitted_at: new Date().toISOString() });
             ttRenderSetup();

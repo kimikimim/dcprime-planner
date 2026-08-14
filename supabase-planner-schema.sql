@@ -177,8 +177,6 @@ create table if not exists planner.timetables (
   student_id uuid not null references planner.students(id) on delete cascade,
   date date not null,
   slots jsonb not null default '{}'::jsonb, -- { "08:00": "스카", "08:30": "기타:사유", ... }
-  campus text,                              -- 능곡 / 장곡
-  seat text,
   submitted boolean not null default false,
   submitted_at timestamptz,
   created_at timestamptz not null default now(),
