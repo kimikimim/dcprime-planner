@@ -1,14 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    "🚨 [Supabase] 환경 변수를 찾을 수 없습니다! Cloudflare 설정을 확인하세요.",
-    { url: supabaseUrl, key: supabaseAnonKey ? "있음" : "없음" }
-  );
-}
+// dcprime-academy와 같은 Supabase 프로젝트(anon key라 클라이언트 노출 전제).
+// Cloudflare Workers(정적 자산 전용)는 빌드 환경변수 주입 UI가 막혀 있어 기본값으로 고정.
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || 'https://smnakhjdtbqgwocwlluz.supabase.co';
+const supabaseAnonKey =
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtbmFraGpkdGJxZ3dvY3dsbHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NDc2MDQsImV4cCI6MjA5MjQyMzYwNH0._jfUSWEVlMr8oapYLul33LRrhEnRJBSgppGNR1jshnA';
 
 const client = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
