@@ -13,6 +13,39 @@ const SESSION_KEY = 'dcprime_planner_session';
     <title>대치프라임 플래너</title>
     <meta name="robots" content="noindex, nofollow" />
     <link rel="icon" type="image/png" href="/favicon-circle.png" />
+    <style is:global>
+      /* 시간표 탭 — 텐투텐(dcprime.10) 일일 스케쥴 그대로 이식 */
+      /* is:global 필요: 그리드/범례 셀은 클라이언트 JS가 innerHTML로 그려서 Astro의 스코프드 CSS(data-astro-cid) 대상이 아님 */
+      .tt-datebar { text-align: center; margin-bottom: 14px; }
+      .tt-date { font-size: 16px; font-weight: 700; color: #1f2430; }
+      .tt-setup { display: flex; gap: 10px; margin-bottom: 16px; }
+      .tt-field { flex: 1; background: #f5f6fa; border-radius: 11px; padding: 10px 12px; }
+      .tt-label { display: block; font-size: 12px; color: #8b92a4; font-weight: 600; margin-bottom: 7px; }
+      .tt-campus { display: flex; gap: 6px; }
+      .tt-campus-btn { flex: 1; border: 1px solid #e2e5ee; background: #fff; border-radius: 8px; padding: 7px 0; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; }
+      .tt-campus-btn.sel { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+      .tt-seatwrap { display: flex; align-items: center; gap: 6px; }
+      .tt-seat { width: 100%; border: 1px solid #e2e5ee; border-radius: 8px; padding: 7px 10px; font-size: 14px; outline: none; }
+      .tt-seat:focus { border-color: #3b82f6; }
+      .tt-seatwrap span { font-size: 13px; color: #8b92a4; }
+      .tt-submit { width: 100%; margin-top: 4px; background: #3b82f6; color: #fff; border: none; border-radius: 11px; padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; }
+      .tt-submit.done { background: #10b981; }
+      .tt-legend { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; margin-bottom: 16px; }
+      .tt-sub { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; border: 2px solid transparent; background: #f3f4f8; color: #444; transition: all .12s; }
+      .tt-sub .dot { width: 12px; height: 12px; border-radius: 50%; }
+      .tt-sub.sel { border-color: #1f2430; }
+      .tt-grid { border: 1px solid #eceef4; border-radius: 12px; overflow: hidden; }
+      .tt-row { display: grid; grid-template-columns: 60px 1fr; align-items: stretch; border-bottom: 1px solid #f0f1f6; }
+      .tt-row:last-child { border-bottom: none; }
+      .tt-time { font-size: 12px; color: #9098a8; padding: 0 8px; display: flex; align-items: center; justify-content: flex-end; background: #fafbfd; }
+      .tt-cell { min-height: 30px; cursor: pointer; display: flex; align-items: center; padding-left: 12px; font-size: 12.5px; font-weight: 600; color: #fff; transition: background .1s; }
+      .tt-cell.empty { background: #fff; color: transparent; }
+      .tt-cell.empty:hover { background: #f1f3f9; }
+      .tt-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; justify-content: center; }
+      .tt-stat { font-size: 13px; color: #555; background: #f5f6fa; border-radius: 8px; padding: 6px 12px; }
+      .tt-stat b { color: #1f2430; }
+      .tt-hint { text-align: center; font-size: 12px; color: #aab0bf; margin-top: 14px; }
+    </style>
   </head>
   <body class="min-h-screen bg-brand-light font-sans text-slate-800">
     <!-- 로그인 화면 -->
@@ -99,30 +132,32 @@ const SESSION_KEY = 'dcprime_planner_session';
           </div>
         </section>
 
-        <!-- 시간표 탭 -->
-        <section id="tab-timetable" class="tab-panel hidden space-y-4">
-          <h2 class="font-bold text-brand-dark">나의 시간표</h2>
-          <form id="timetable-form" class="space-y-2 rounded-xl bg-white p-4 shadow-sm">
-            <div class="flex gap-2">
-              <select id="timetable-day" class="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none">
-                <option value="0">월</option>
-                <option value="1">화</option>
-                <option value="2">수</option>
-                <option value="3">목</option>
-                <option value="4">금</option>
-                <option value="5">토</option>
-                <option value="6">일</option>
-              </select>
-              <input type="time" id="timetable-start" required class="flex-1 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
-              <input type="time" id="timetable-end" class="flex-1 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
+        <!-- 시간표 탭 (텐투텐 일일 스케쥴 이식) -->
+        <section id="tab-timetable" class="tab-panel hidden">
+          <div class="tt-datebar">
+            <div class="tt-date" id="tt-date">날짜</div>
+          </div>
+
+          <div class="tt-setup">
+            <div class="tt-field">
+              <span class="tt-label">스터디카페</span>
+              <div class="tt-campus">
+                <button type="button" class="tt-campus-btn" data-campus="능곡">능곡</button>
+                <button type="button" class="tt-campus-btn" data-campus="장곡">장곡</button>
+              </div>
             </div>
-            <div class="flex gap-2">
-              <input type="text" id="timetable-subject" placeholder="과목" list="subject-list" class="w-24 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
-              <input type="text" id="timetable-content" placeholder="내용 (예: 수학 학원, 자습)" required class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+            <div class="tt-field">
+              <span class="tt-label">좌석</span>
+              <div class="tt-seatwrap"><input id="tt-seat" class="tt-seat" type="number" min="1" inputmode="numeric" placeholder="번호" /><span>번</span></div>
             </div>
-            <button type="submit" class="w-full rounded-lg bg-brand py-2 text-sm font-semibold text-white">시간표에 추가</button>
-          </form>
-          <div id="timetable-list" class="space-y-4"></div>
+          </div>
+
+          <div class="tt-legend" id="tt-legend"></div>
+          <div class="tt-grid" id="tt-grid"></div>
+          <div class="tt-summary" id="tt-summary"></div>
+
+          <button type="button" class="tt-submit" id="tt-submit">오늘 시간표 제출</button>
+          <p class="tt-hint">시간 칸을 누르면 선택한 항목으로 칠해집니다. 빈칸 = 기록 없는 시간. (지우개로 비우기)</p>
         </section>
 
         <!-- 학습시간 탭 -->
@@ -347,11 +382,6 @@ const SESSION_KEY = 'dcprime_planner_session';
           await planner.from('goals').delete().eq('id', id);
           loadGoals();
         }
-        if (target.classList.contains('timetable-delete')) {
-          const id = target.dataset.id!;
-          await planner.from('timetable_entries').delete().eq('id', id);
-          loadTimetable();
-        }
       });
 
       document.getElementById('daily-todo-form')?.addEventListener('submit', async (e) => {
@@ -392,85 +422,187 @@ const SESSION_KEY = 'dcprime_planner_session';
         loadTodos();
       });
 
-      // ── 시간표 (학생이 직접 등록하는 개인 시간표) ──
-      const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
+      // ── 시간표 (텐투텐 일일 스케쥴 이식 — 상담/지각·결석 탭은 제외) ──
+      const TT_SUBJECTS = [
+        { key: '스카', color: '#3b82f6' },
+        { key: '식사', color: '#f59e0b' },
+        { key: '학원수업', color: '#10b981' },
+        { key: '기타', color: '#8b5cf6' },
+        { key: '지우개', color: '#cbd2e0', erase: true },
+      ];
+      // 08:00 ~ 24:00, 30분 단위 (32칸)
+      const TT_SLOTS: string[] = [];
+      for (let m = 480; m < 1440; m += 30) {
+        const h = Math.floor(m / 60), mm = m % 60;
+        TT_SLOTS.push(`${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
+      }
 
-      function fmtTimeRange(start: string, end: string | null) {
-        const s = start.slice(0, 5);
-        return end ? `${s} - ${end.slice(0, 5)}` : s;
+      let ttSel = '스카';
+      let ttRow: { slots: Record<string, string>; campus: string | null; seat: string; submitted: boolean } = {
+        slots: {},
+        campus: null,
+        seat: '',
+        submitted: false,
+      };
+      let ttInited = false;
+
+      function ttYmd(d: Date) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+      const TT_TODAY = ttYmd(new Date());
+      const ttBaseKey = (k: string) => (k ? k.split(':')[0] : k);
+      const ttColorOf = (k: string) => (TT_SUBJECTS.find((s) => s.key === ttBaseKey(k)) || {}).color || '#fff';
+      const ttDisplayOf = (k: string) => {
+        if (!k) return '';
+        const [base, ...rest] = k.split(':');
+        return rest.length ? `${base}(${rest.join(':')})` : base;
+      };
+
+      async function ttLoadDay(studentId: string) {
+        const { data } = await planner.from('timetables').select('*').eq('student_id', studentId).eq('date', TT_TODAY).maybeSingle();
+        if (data) ttRow = { slots: data.slots || {}, campus: data.campus, seat: data.seat || '', submitted: !!data.submitted };
+      }
+
+      async function ttPersist(studentId: string, extra?: Record<string, unknown>) {
+        const payload = { student_id: studentId, date: TT_TODAY, slots: ttRow.slots, campus: ttRow.campus, seat: ttRow.seat, submitted: ttRow.submitted, ...(extra || {}) };
+        const { error } = await planner.from('timetables').upsert(payload, { onConflict: 'student_id,date' });
+        if (error) console.error('시간표 저장 오류', error);
+      }
+
+      function ttRenderLegend() {
+        const legend = document.getElementById('tt-legend')!;
+        legend.innerHTML = TT_SUBJECTS.map(
+          (s) => `<button type="button" class="tt-sub ${s.key === ttSel ? 'sel' : ''}" data-sub="${s.key}">
+             <span class="dot" style="background:${s.color}"></span>${s.key}
+           </button>`
+        ).join('');
+        legend.querySelectorAll('.tt-sub').forEach((b) =>
+          b.addEventListener('click', () => {
+            ttSel = (b as HTMLElement).dataset.sub!;
+            ttRenderLegend();
+          })
+        );
+      }
+
+      function ttRenderSetup() {
+        document.querySelectorAll('.tt-campus-btn').forEach((b) => b.classList.toggle('sel', (b as HTMLElement).dataset.campus === ttRow.campus));
+        const seatEl = document.getElementById('tt-seat') as HTMLInputElement;
+        if (ttRow.seat != null) seatEl.value = ttRow.seat;
+        const submitBtn = document.getElementById('tt-submit')!;
+        if (ttRow.submitted) {
+          submitBtn.textContent = '제출 완료 ✓ (다시 제출하기)';
+          submitBtn.classList.add('done');
+        } else {
+          submitBtn.textContent = '오늘 시간표 제출';
+          submitBtn.classList.remove('done');
+        }
+      }
+
+      function ttRenderSummary() {
+        const summaryEl = document.getElementById('tt-summary')!;
+        const studied = Object.keys(ttRow.slots).length;
+        const totalH = (studied * 0.5).toFixed(1);
+        const bySub: Record<string, number> = {};
+        Object.values(ttRow.slots).forEach((s) => {
+          const k = ttBaseKey(s);
+          bySub[k] = (bySub[k] ?? 0) + 0.5;
+        });
+        const parts = Object.entries(bySub)
+          .map(([k, h]) => `<span class="tt-stat"><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${ttColorOf(k)};margin-right:5px"></span>${k} <b>${h}h</b></span>`)
+          .join('');
+        summaryEl.innerHTML = `<span class="tt-stat">총 공부 <b>${totalH}시간</b></span><span class="tt-stat">빈 시간 <b>${(TT_SLOTS.length - studied) * 0.5}시간</b></span>${parts}`;
+      }
+
+      function ttRenderGrid(studentId: string) {
+        const grid = document.getElementById('tt-grid')!;
+        grid.innerHTML = TT_SLOTS.map((t) => {
+          const v = ttRow.slots[t];
+          const style = v ? `background:${ttColorOf(v)}` : '';
+          const label = v ? ttDisplayOf(v) : '';
+          return `<div class="tt-row">
+            <div class="tt-time">${t}</div>
+            <div class="tt-cell ${v ? '' : 'empty'}" data-slot="${t}" style="${style}">${label}</div>
+          </div>`;
+        }).join('');
+        grid.querySelectorAll('.tt-cell').forEach((c) =>
+          c.addEventListener('click', () => {
+            const slot = (c as HTMLElement).dataset.slot!;
+            if (ttSel === '지우개') {
+              delete ttRow.slots[slot];
+            } else if (ttSel === '기타') {
+              const reason = window.prompt('기타 사유를 입력해주세요 (선택사항)', '');
+              if (reason === null) return;
+              ttRow.slots[slot] = reason.trim() ? `기타:${reason.trim()}` : '기타';
+            } else {
+              if (ttSel === '식사') {
+                const mealCount = Object.entries(ttRow.slots).filter(([k, v]) => k !== slot && ttBaseKey(v) === '식사').length;
+                if (mealCount >= 4) {
+                  alert('식사시간은 점심 저녁 도합 2시간입니다.');
+                  return;
+                }
+              }
+              ttRow.slots[slot] = ttSel;
+            }
+            ttRenderGrid(studentId);
+            ttRenderSummary();
+            ttPersist(studentId);
+          })
+        );
+        ttRenderSummary();
       }
 
       async function loadTimetable() {
         const session = getSession();
         if (!session) return;
-        const { data } = await planner
-          .from('timetable_entries')
-          .select('*')
-          .eq('student_id', session.id)
-          .order('day_of_week')
-          .order('start_time');
-        const el = document.getElementById('timetable-list')!;
-        const items = data ?? [];
-        if (items.length === 0) {
-          el.innerHTML = '<p class="rounded-xl bg-white p-4 text-center text-sm text-slate-400 shadow-sm">아직 등록된 시간표가 없어요.</p>';
-          return;
-        }
-        const byDay = new Map<number, any[]>();
-        items.forEach((it: any) => {
-          if (!byDay.has(it.day_of_week)) byDay.set(it.day_of_week, []);
-          byDay.get(it.day_of_week)!.push(it);
-        });
-        el.innerHTML = [...byDay.keys()]
-          .sort((a, b) => a - b)
-          .map((day) => {
-            const rows = byDay
-              .get(day)!
-              .map(
-                (it) => `
-              <div class="flex items-center justify-between gap-3 border-b border-slate-100 py-2.5 last:border-b-0">
-                <div>
-                  <p class="text-sm font-semibold text-slate-800">
-                    ${it.subject ? `<span class="mr-1 rounded bg-brand-light px-1.5 py-0.5 text-xs text-brand-dark">${escHtml(it.subject)}</span>` : ''}${escHtml(it.content)}
-                  </p>
-                  <p class="mt-0.5 text-xs text-slate-400">${fmtTimeRange(it.start_time, it.end_time)}</p>
-                </div>
-                <button data-id="${it.id}" class="timetable-delete text-xs text-slate-300 hover:text-red-400">삭제</button>
-              </div>`
-              )
-              .join('');
-            return `
-              <div class="rounded-xl bg-white p-4 shadow-sm">
-                <h3 class="mb-1 text-sm font-bold text-brand-dark">${DAY_LABELS[day]}요일</h3>
-                ${rows}
-              </div>`;
-          })
-          .join('');
-      }
 
-      document.getElementById('timetable-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const session = getSession();
-        if (!session) return;
-        const dayEl = document.getElementById('timetable-day') as HTMLSelectElement;
-        const startEl = document.getElementById('timetable-start') as HTMLInputElement;
-        const endEl = document.getElementById('timetable-end') as HTMLInputElement;
-        const subjectEl = document.getElementById('timetable-subject') as HTMLInputElement;
-        const contentEl = document.getElementById('timetable-content') as HTMLInputElement;
-        if (!startEl.value || !contentEl.value.trim()) return;
-        await planner.from('timetable_entries').insert({
-          student_id: session.id,
-          day_of_week: parseInt(dayEl.value, 10),
-          start_time: startEl.value,
-          end_time: endEl.value || null,
-          subject: subjectEl.value.trim() || null,
-          content: contentEl.value.trim(),
-        });
-        startEl.value = '';
-        endEl.value = '';
-        subjectEl.value = '';
-        contentEl.value = '';
-        loadTimetable();
-      });
+        const dateEl = document.getElementById('tt-date')!;
+        dateEl.textContent = `${TT_TODAY} (${['일', '월', '화', '수', '목', '금', '토'][new Date().getDay()]}) · 오늘`;
+
+        if (!ttInited) {
+          ttInited = true;
+          document.querySelectorAll('.tt-campus-btn').forEach((b) =>
+            b.addEventListener('click', () => {
+              ttRow.campus = (b as HTMLElement).dataset.campus!;
+              ttRenderSetup();
+              ttPersist(session.id);
+            })
+          );
+          let seatTimer: ReturnType<typeof setTimeout>;
+          document.getElementById('tt-seat')?.addEventListener('input', (e) => {
+            ttRow.seat = (e.target as HTMLInputElement).value;
+            clearTimeout(seatTimer);
+            seatTimer = setTimeout(() => ttPersist(session.id), 400);
+          });
+          document.getElementById('tt-submit')?.addEventListener('click', async () => {
+            if (!ttRow.campus) {
+              alert('스터디카페(능곡/장곡)를 선택해주세요.');
+              return;
+            }
+            if (!(document.getElementById('tt-seat') as HTMLInputElement).value) {
+              alert('좌석 번호를 입력해주세요.');
+              return;
+            }
+            ttRow.submitted = true;
+            await ttPersist(session.id, { submitted_at: new Date().toISOString() });
+            ttRenderSetup();
+            alert('오늘 시간표가 제출되었습니다.');
+          });
+
+          // 자정에 새로고침 → 시간표 초기화 (텐투텐과 동일)
+          const msUntilMidnight = () => {
+            const n = new Date();
+            const m = new Date(n);
+            m.setHours(24, 0, 0, 0);
+            return m.getTime() - n.getTime();
+          };
+          setTimeout(() => location.reload(), msUntilMidnight());
+        }
+
+        await ttLoadDay(session.id);
+        ttRenderLegend();
+        ttRenderSetup();
+        ttRenderGrid(session.id);
+      }
 
       // ── 학습시간 ──
       async function loadStudy() {

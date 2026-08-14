@@ -147,7 +147,9 @@ grant select, insert, update, delete on planner.goals to anon;
 create index if not exists idx_goals_student on planner.goals(student_id, is_active, target_date);
 
 -- ────────────────────────────────────────────
--- 6. timetable_entries (학생이 직접 등록하는 개인 시간표)
+-- 6. timetable_entries — ⚠️ 더 이상 사용 안 함 (아래 7번 timetables로 대체됨).
+--    이미 실행했다면 앱에서 참조하지 않으니 그냥 둬도 무방. 정리하고 싶으면:
+--    drop table if exists planner.timetable_entries;
 -- ────────────────────────────────────────────
 create table if not exists planner.timetable_entries (
   id uuid primary key default gen_random_uuid(),
@@ -166,3 +168,24 @@ create policy "anon all timetable_entries" on planner.timetable_entries
 grant select, insert, update, delete on planner.timetable_entries to anon;
 
 create index if not exists idx_timetable_entries_student on planner.timetable_entries(student_id, day_of_week, start_time);
+
+-- ────────────────────────────────────────────
+-- 7. timetables (텐투텐/dcprime.10의 "일일 스케쥴" 그대로 이식)
+--    하루 전체를 30분 단위 슬롯으로 색칠하는 방식. 학생당 하루 1행(upsert).
+-- ────────────────────────────────────────────
+create table if not exists planner.timetables (
+  student_id uuid not null references planner.students(id) on delete cascade,
+  date date not null,
+  slots jsonb not null default '{}'::jsonb, -- { "08:00": "스카", "08:30": "기타:사유", ... }
+  campus text,                              -- 능곡 / 장곡
+  seat text,
+  submitted boolean not null default false,
+  submitted_at timestamptz,
+  created_at timestamptz not null default now(),
+  primary key (student_id, date)
+);
+alter table planner.timetables enable row level security;
+drop policy if exists "anon all timetables" on planner.timetables;
+create policy "anon all timetables" on planner.timetables
+  for all to anon using (true) with check (true);
+grant select, insert, update, delete on planner.timetables to anon;
