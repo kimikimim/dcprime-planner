@@ -191,6 +191,17 @@ img { display: block; }
 .subject-badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
 .empty-text { font-size: 13px; color: var(--gray-4); text-align: center; padding: 24px 0; }
 
+/* ── 탭 콘텐츠 공통 (dcprime.10 chat.html 학습 인증 탭 스타일 그대로) ── */
+.study-container { padding: 20px 16px 40px; display: flex; flex-direction: column; gap: 20px; max-width: 540px; width: 100%; margin: 0 auto; }
+.study-section-title { font-size: 18px; font-weight: 800; color: var(--black); margin-bottom: 6px; letter-spacing: -.3px; }
+.study-section-desc { font-size: 13px; color: var(--gray-3); line-height: 1.6; margin-bottom: 18px; }
+.study-form-card { background: var(--white); border-radius: var(--r-lg); padding: 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 18px; }
+.study-field { display: flex; flex-direction: column; gap: 8px; }
+.study-label { font-size: 13px; font-weight: 700; color: var(--gray-2); }
+.study-label-hint { font-size: 12px; font-weight: 400; color: var(--gray-4); margin-left: 4px; }
+.study-label-required { color: var(--blue); margin-left: 2px; }
+.study-log-student { font-size: 13px; font-weight: 700; color: var(--black); }
+
 /* ============================================================
    원장(관리자) 페이지
    ============================================================ */
