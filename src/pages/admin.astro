@@ -133,8 +133,19 @@ import '../styles/global.css';
         return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
       }
 
-      function todayStr() {
-        return new Date().toISOString().slice(0, 10);
+      function pad2(n: number) {
+        return String(n).padStart(2, '0');
+      }
+
+      function ymdLocal(d: Date) {
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+      }
+
+      // 학습시간의 "오늘"은 학생 페이지와 동일하게 새벽 4시 기준으로 넘어감
+      function studyDayStr() {
+        const d = new Date();
+        d.setHours(d.getHours() - 4);
+        return ymdLocal(d);
       }
 
       document.getElementById('logout-btn')?.addEventListener('click', () => {
@@ -299,7 +310,7 @@ import '../styles/global.css';
 
         const [{ data: students }, { data: todayLogs }, { data: recent }] = await Promise.all([
           planner.from('students').select('*').eq('is_active', true).order('name'),
-          planner.from('study_logs').select('*').eq('log_date', todayStr()),
+          planner.from('study_logs').select('*').eq('log_date', studyDayStr()),
           planner.from('study_logs').select('*, students(name)').order('log_date', { ascending: false }).order('created_at', { ascending: false }).limit(20),
         ]);
 

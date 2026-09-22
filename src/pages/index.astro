@@ -247,7 +247,7 @@ import '../styles/global.css';
           </div>
 
           <div>
-            <h3 class="section-subtitle">최근 기록</h3>
+            <h3 class="section-subtitle">오늘 기록</h3>
             <div class="study-log-list" id="study-log-list"><p class="empty-text">아직 기록이 없어요.</p></div>
           </div>
         </div>
@@ -302,9 +302,24 @@ import '../styles/global.css';
         return raw ? JSON.parse(raw) : null;
       }
 
+      function pad2(n: number) {
+        return String(n).padStart(2, '0');
+      }
+
+      function ymdLocal(d: Date) {
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+      }
+
       function todayStr() {
+        return ymdLocal(new Date());
+      }
+
+      // 학습시간 기록의 "오늘"은 자정이 아니라 새벽 4시 기준으로 넘어감
+      // (예: 9/22 04:00 ~ 9/23 03:59는 전부 9/22로 기록)
+      function studyDayStr() {
         const d = new Date();
-        return d.toISOString().slice(0, 10);
+        d.setHours(d.getHours() - 4);
+        return ymdLocal(d);
       }
 
       function weekStartStr() {
@@ -312,7 +327,7 @@ import '../styles/global.css';
         const day = d.getDay(); // 0=일
         const diff = day === 0 ? -6 : 1 - day; // 이번주 월요일
         d.setDate(d.getDate() + diff);
-        return d.toISOString().slice(0, 10);
+        return ymdLocal(d);
       }
 
       function escHtml(str: string) {
@@ -726,11 +741,13 @@ import '../styles/global.css';
         const session = getSession();
         if (!session) return;
 
+        const studyDay = studyDayStr();
         const { data: todayLogs } = await planner
           .from('study_logs')
-          .select('subject, minutes')
+          .select('*')
           .eq('student_id', session.id)
-          .eq('log_date', todayStr());
+          .eq('log_date', studyDay)
+          .order('created_at', { ascending: false });
         const bySubject: Record<string, number> = {};
         (todayLogs ?? []).forEach((l: any) => {
           const key = l.subject || '기타';
@@ -742,16 +759,9 @@ import '../styles/global.css';
           ? entries.map(([subj, min]) => `<span class="subject-badge" style="background:var(--blue-light);color:var(--blue)">${escHtml(subj)} ${min}분</span>`).join('')
           : '<p class="empty-text">오늘 기록이 없어요.</p>';
 
-        const { data: recent } = await planner
-          .from('study_logs')
-          .select('*')
-          .eq('student_id', session.id)
-          .order('log_date', { ascending: false })
-          .order('created_at', { ascending: false })
-          .limit(10);
         const listEl = document.getElementById('study-log-list')!;
-        listEl.innerHTML = (recent ?? []).length
-          ? recent!
+        listEl.innerHTML = (todayLogs ?? []).length
+          ? todayLogs!
               .map(
                 (l: any) => `
             <div class="study-log-item">
@@ -761,12 +771,11 @@ import '../styles/global.css';
                   <span class="study-log-hours">${l.minutes}분</span>
                 </div>
                 ${l.memo ? `<p class="study-log-summary">${escHtml(l.memo)}</p>` : ''}
-                <p class="study-log-date">${l.log_date}</p>
               </div>
             </div>`
               )
               .join('')
-          : '<p class="empty-text">아직 기록이 없어요.</p>';
+          : '<p class="empty-text">오늘 기록이 없어요.</p>';
       }
 
       document.getElementById('study-log-form')?.addEventListener('submit', async (e) => {
@@ -848,7 +857,7 @@ import '../styles/global.css';
       });
 
       // ── 초기화 ──
-      (document.getElementById('study-log-date') as HTMLInputElement).value = todayStr();
+      (document.getElementById('study-log-date') as HTMLInputElement).value = studyDayStr();
       if (sessionStorage.getItem(ADMIN_SESSION_KEY) === 'ok') {
         location.replace('/admin');
       } else {
