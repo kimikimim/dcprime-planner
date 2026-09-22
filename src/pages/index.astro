@@ -1,7 +1,5 @@
 ---
 import '../styles/global.css';
-
-const SESSION_KEY = 'dcprime_planner_session';
 ---
 
 <!doctype html>
@@ -12,166 +10,273 @@ const SESSION_KEY = 'dcprime_planner_session';
     <meta name="generator" content={Astro.generator} />
     <title>대치프라임 플래너</title>
     <meta name="robots" content="noindex, nofollow" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/png" href="/favicon-circle.png" />
     <style is:global>
-      /* 시간표 탭 — 텐투텐(dcprime.10) 일일 스케쥴 그대로 이식 */
-      /* is:global 필요: 그리드/범례 셀은 클라이언트 JS가 innerHTML로 그려서 Astro의 스코프드 CSS(data-astro-cid) 대상이 아님 */
+      /* 이 페이지 전용 컴포넌트 — dcprime.10(텐투텐) chat.html의 인라인 스타일을 그대로 이식.
+         클라이언트 JS가 innerHTML로 그려서 Astro 스코프드 CSS 대상이 아니므로 is:global 필요. */
+
+      /* ── 할일 (dcprime.10 "오늘의 목표" .gl-* 그대로) ── */
+      .gl-progress { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+      .gl-bar { flex: 1; height: 10px; background: var(--gray-7); border-radius: 999px; overflow: hidden; }
+      .gl-bar-fill { height: 100%; width: 0; background: var(--blue); border-radius: 999px; transition: width .25s; }
+      .gl-rate { font-size: 13px; font-weight: 800; color: var(--blue); min-width: 38px; text-align: right; }
+      .gl-add { display: flex; gap: 8px; margin-bottom: 12px; }
+      .gl-subject { flex: 0 0 76px; }
+      .gl-input { flex: 1; min-width: 0; border: 1.5px solid var(--gray-6); border-radius: 10px; padding: 11px 12px; font-size: 14px; background: var(--gray-8); outline: none; }
+      .gl-input:focus { border-color: var(--blue); background: var(--white); }
+      .gl-add-btn { background: var(--blue); color: #fff; border: none; border-radius: 10px; padding: 0 16px; font-size: 14px; font-weight: 700; }
+      .gl-item { display: flex; align-items: center; gap: 10px; background: var(--white); border: 1px solid var(--gray-6); border-radius: var(--r-md); padding: 12px 14px; margin-bottom: 8px; }
+      .gl-check { width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--gray-5); flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; }
+      .gl-check.done { background: var(--green); border-color: var(--green); }
+      .gl-text { flex: 1; font-size: 14px; color: var(--black); }
+      .gl-text.done { text-decoration: line-through; color: var(--gray-4); }
+      .gl-del { border: none; background: none; color: var(--red); font-weight: 600; cursor: pointer; font-size: 12px; }
+
+      /* ── 시간표 (dcprime.10 "일일 스케쥴" .tt-* 그대로, 색상만 디자인 시스템 변수로) ── */
       .tt-datebar { text-align: center; margin-bottom: 14px; }
-      .tt-date { font-size: 16px; font-weight: 700; color: #1f2430; }
-      .tt-submit { width: 100%; margin-top: 4px; background: #3b82f6; color: #fff; border: none; border-radius: 11px; padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; }
-      .tt-submit.done { background: #10b981; }
+      .tt-date { font-size: 16px; font-weight: 700; color: var(--black); }
+      .tt-submit { width: 100%; margin-top: 4px; background: var(--blue); color: #fff; border: none; border-radius: var(--r-md); padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; }
+      .tt-submit.done { background: var(--green); }
       .tt-legend { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; margin-bottom: 16px; }
-      .tt-sub { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; border: 2px solid transparent; background: #f3f4f8; color: #444; transition: all .12s; }
+      .tt-sub { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; border: 2px solid transparent; background: var(--gray-7); color: var(--gray-2); transition: all .12s; }
       .tt-sub .dot { width: 12px; height: 12px; border-radius: 50%; }
-      .tt-sub.sel { border-color: #1f2430; }
-      .tt-grid { border: 1px solid #eceef4; border-radius: 12px; overflow: hidden; }
-      .tt-row { display: grid; grid-template-columns: 60px 1fr; align-items: stretch; border-bottom: 1px solid #f0f1f6; }
+      .tt-sub.sel { border-color: var(--black); }
+      .tt-grid { border: 1px solid var(--gray-6); border-radius: var(--r-md); overflow: hidden; }
+      .tt-row { display: grid; grid-template-columns: 60px 1fr; align-items: stretch; border-bottom: 1px solid var(--gray-7); }
       .tt-row:last-child { border-bottom: none; }
-      .tt-time { font-size: 12px; color: #9098a8; padding: 0 8px; display: flex; align-items: center; justify-content: flex-end; background: #fafbfd; }
+      .tt-time { font-size: 12px; color: var(--gray-3); padding: 0 8px; display: flex; align-items: center; justify-content: flex-end; background: var(--gray-8); }
       .tt-cell { min-height: 30px; cursor: pointer; display: flex; align-items: center; padding-left: 12px; font-size: 12.5px; font-weight: 600; color: #fff; transition: background .1s; }
-      .tt-cell.empty { background: #fff; color: transparent; }
-      .tt-cell.empty:hover { background: #f1f3f9; }
-      .tt-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; justify-content: center; }
-      .tt-stat { font-size: 13px; color: #555; background: #f5f6fa; border-radius: 8px; padding: 6px 12px; }
-      .tt-stat b { color: #1f2430; }
-      .tt-hint { text-align: center; font-size: 12px; color: #aab0bf; margin-top: 14px; }
+      .tt-cell.empty { background: var(--white); color: transparent; }
+      .tt-cell.empty:hover { background: var(--gray-8); }
+      .tt-summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; justify-content: center; }
+      .tt-stat { font-size: 13px; color: var(--gray-2); background: var(--gray-7); border-radius: 8px; padding: 6px 12px; }
+      .tt-stat b { color: var(--black); }
+      .tt-hint { text-align: center; font-size: 12px; color: var(--gray-4); margin-top: 14px; }
+
+      /* ── 학습시간 (dcprime.10 .study-log-item 계열, 사진 없는 버전) ── */
+      .study-log-list { background: var(--white); border-radius: var(--r-md); padding: 4px 16px; box-shadow: var(--shadow-sm); }
+      .study-log-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--gray-7); }
+      .study-log-item:last-child { border-bottom: none; }
+      .study-log-info { flex: 1; min-width: 0; }
+      .study-log-top { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; flex-wrap: wrap; }
+      .study-log-hours { font-size: 13px; font-weight: 700; color: var(--blue); margin-left: auto; }
+      .study-log-summary { font-size: 12px; color: var(--gray-2); }
+      .study-log-date { font-size: 11px; color: var(--gray-4); }
+
+      /* ── 목표 / D-Day ── */
+      .dday-card { display: flex; align-items: center; gap: 12px; background: var(--white); border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 8px; box-shadow: var(--shadow-sm); }
+      .dday-badge { flex-shrink: 0; background: var(--blue); color: #fff; font-size: 12px; font-weight: 800; border-radius: 8px; padding: 6px 10px; }
+      .dday-title { font-size: 14px; font-weight: 700; color: var(--black); }
+      .dday-meta { font-size: 11px; color: var(--gray-4); margin-top: 2px; }
     </style>
   </head>
-  <body class="min-h-screen bg-brand-light font-sans text-slate-800">
+  <body>
     <!-- 로그인 화면 -->
-    <div id="login-screen" class="flex min-h-screen items-center justify-center px-4">
-      <div class="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
-        <h1 class="mb-1 text-center text-xl font-bold text-brand-dark">대치프라임 플래너</h1>
-        <p class="mb-6 text-center text-sm text-slate-500">4자리 PIN을 입력하세요</p>
-        <input
-          id="pin-input"
-          type="password"
-          inputmode="numeric"
-          maxlength="4"
-          placeholder="••••"
-          class="mb-3 w-full rounded-lg border border-slate-300 px-4 py-3 text-center text-2xl tracking-[0.5em] focus:border-brand focus:outline-none"
-        />
-        <p id="login-error" class="mb-3 hidden text-center text-sm text-red-500">PIN이 올바르지 않습니다.</p>
-        <button
-          id="login-btn"
-          class="w-full rounded-lg bg-brand py-3 font-semibold text-white transition hover:bg-brand-dark"
-        >
-          입장하기
-        </button>
+    <div class="login-body" id="login-screen">
+      <div class="login-container">
+        <div class="login-logo">
+          <img src="/favicon-circle.png" alt="대치프라임" style="width:56px;height:56px;border-radius:50%;object-fit:cover" />
+          <span class="logo-text">DC Prime 플래너</span>
+        </div>
+        <div class="login-header">
+          <h1 class="login-title">PIN 번호를<br />입력하세요</h1>
+          <p class="login-subtitle">4자리 번호를 눌러주세요</p>
+        </div>
+        <div class="pin-display" id="pin-display">
+          <div class="pin-dot" id="dot0"></div>
+          <div class="pin-dot" id="dot1"></div>
+          <div class="pin-dot" id="dot2"></div>
+          <div class="pin-dot" id="dot3"></div>
+        </div>
+        <p class="error-message" id="login-error"></p>
+        <div class="numpad">
+          <button type="button" class="numpad-btn" data-num="1">1</button>
+          <button type="button" class="numpad-btn" data-num="2">2<span class="numpad-sub">ABC</span></button>
+          <button type="button" class="numpad-btn" data-num="3">3<span class="numpad-sub">DEF</span></button>
+          <button type="button" class="numpad-btn" data-num="4">4<span class="numpad-sub">GHI</span></button>
+          <button type="button" class="numpad-btn" data-num="5">5<span class="numpad-sub">JKL</span></button>
+          <button type="button" class="numpad-btn" data-num="6">6<span class="numpad-sub">MNO</span></button>
+          <button type="button" class="numpad-btn" data-num="7">7<span class="numpad-sub">PQRS</span></button>
+          <button type="button" class="numpad-btn" data-num="8">8<span class="numpad-sub">TUV</span></button>
+          <button type="button" class="numpad-btn" data-num="9">9<span class="numpad-sub">WXYZ</span></button>
+          <div class="numpad-empty"></div>
+          <button type="button" class="numpad-btn" data-num="0">0</button>
+          <button type="button" class="numpad-btn numpad-del" id="delete-btn" aria-label="지우기">
+            <svg width="22" height="16" viewBox="0 0 22 16" fill="none">
+              <path d="M8 1H20C20.5523 1 21 1.44772 21 2V14C21 14.5523 20.5523 15 20 15H8L1 8L8 1Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+              <path d="M13 6L17 10M17 6L13 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div class="login-loading" id="login-loading">
+          <div class="loading-spinner"></div>
+          <span>확인 중...</span>
+        </div>
       </div>
     </div>
 
     <!-- 메인 화면 -->
-    <div id="app-screen" class="hidden min-h-screen pb-20">
-      <header class="sticky top-0 z-10 flex items-center justify-between bg-white px-4 py-3 shadow-sm">
-        <div>
-          <p class="text-sm text-slate-500">안녕하세요</p>
-          <p class="font-bold text-brand-dark"><span id="student-name"></span>님</p>
+    <div id="app-screen" class="chat-body hidden">
+      <header class="chat-header">
+        <div class="chat-header-inner">
+          <div class="chat-header-left">
+            <img src="/favicon-circle.png" alt="대치프라임" style="width:34px;height:34px;border-radius:50%;object-fit:cover" />
+            <div>
+              <p class="chat-header-name"><span id="student-name"></span>님</p>
+              <p class="chat-header-grade" id="student-grade"></p>
+            </div>
+          </div>
+          <div class="chat-header-right">
+            <button class="hamburger-btn" id="hamburger-btn" title="메뉴">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+            </button>
+            <button class="icon-btn" id="logout-btn" title="로그아웃">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            </button>
+          </div>
         </div>
-        <button id="logout-btn" class="hidden text-sm text-slate-400 underline sm:block">로그아웃</button>
-        <button id="mobile-menu-btn" aria-label="메뉴" class="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 active:bg-brand-light sm:hidden">
-          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
+
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="todos">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3 8-8M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            할일
+          </button>
+          <button class="tab-btn" data-tab="timetable">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="2" /><path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+            시간표
+          </button>
+          <button class="tab-btn" data-tab="study">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            학습시간
+          </button>
+          <button class="tab-btn" data-tab="goals">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" /><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" /><circle cx="12" cy="12" r="1.5" fill="currentColor" /></svg>
+            목표
+          </button>
+          <button class="tab-bar-logout" id="hamburger-logout-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            로그아웃
+          </button>
+        </div>
       </header>
 
-      <nav class="border-b border-slate-200 bg-white">
-        <!-- 탭 바 (데스크톱/태블릿) -->
-        <div class="hidden sm:flex px-2">
-          <button data-tab="todos" class="tab-btn flex-1 border-b-2 border-brand py-3 text-sm font-semibold text-brand-dark">할일</button>
-          <button data-tab="timetable" class="tab-btn flex-1 border-b-2 border-transparent py-3 text-sm font-semibold text-slate-400">시간표</button>
-          <button data-tab="study" class="tab-btn flex-1 border-b-2 border-transparent py-3 text-sm font-semibold text-slate-400">학습시간</button>
-          <button data-tab="goals" class="tab-btn flex-1 border-b-2 border-transparent py-3 text-sm font-semibold text-slate-400">목표</button>
-        </div>
-
-        <!-- 현재 탭 표시 (모바일 전용, 햄버거 버튼은 헤더 우측으로 이동) -->
-        <div id="current-tab-label" class="px-4 py-3 text-sm font-bold text-brand-dark sm:hidden">할일</div>
-
-        <div id="mobile-menu" class="hidden border-t border-slate-100 px-2 pb-2 sm:hidden">
-          <button data-tab="todos" class="mobile-tab-btn block w-full rounded-lg bg-brand-light px-3 py-2.5 text-left text-sm font-semibold text-brand-dark">할일</button>
-          <button data-tab="timetable" class="mobile-tab-btn block w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-500">시간표</button>
-          <button data-tab="study" class="mobile-tab-btn block w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-500">학습시간</button>
-          <button data-tab="goals" class="mobile-tab-btn block w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-500">목표</button>
-          <div class="my-1 border-t border-slate-100"></div>
-          <button id="mobile-logout-btn" class="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-red-400">로그아웃</button>
-        </div>
-      </nav>
-
-      <main class="mx-auto max-w-2xl px-4 py-5">
-        <!-- 할일 탭 -->
-        <section id="tab-todos" class="tab-panel space-y-6">
+      <!-- 할일 -->
+      <div class="tab-panel active" id="tab-todos">
+        <div class="study-container">
           <div>
-            <h2 class="mb-2 font-bold text-brand-dark">오늘 할일</h2>
-            <form id="daily-todo-form" class="mb-3 flex gap-2">
-              <input type="text" id="daily-todo-subject" placeholder="과목" list="subject-list" class="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
-              <input type="text" id="daily-todo-content" placeholder="할 일을 입력하세요" required class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
-              <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">추가</button>
+            <h2 class="study-section-title">오늘 할일</h2>
+            <div class="gl-progress">
+              <div class="gl-bar"><div class="gl-bar-fill" id="daily-progress-fill"></div></div>
+              <span class="gl-rate" id="daily-progress-rate">0%</span>
+            </div>
+            <form id="daily-todo-form" class="gl-add">
+              <input type="text" id="daily-todo-subject" placeholder="과목" list="subject-list" class="gl-input gl-subject" />
+              <input type="text" id="daily-todo-content" placeholder="할 일을 입력하세요" required maxlength="100" class="gl-input" />
+              <button type="submit" class="gl-add-btn">추가</button>
             </form>
-            <ul id="daily-todo-list" class="space-y-2"></ul>
+            <div id="daily-todo-list"><p class="empty-text">아직 등록된 항목이 없어요.</p></div>
           </div>
 
           <div>
-            <h2 class="mb-2 font-bold text-brand-dark">이번주 할일</h2>
-            <form id="weekly-todo-form" class="mb-3 flex gap-2">
-              <input type="text" id="weekly-todo-subject" placeholder="과목" list="subject-list" class="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
-              <input type="text" id="weekly-todo-content" placeholder="이번주 목표를 입력하세요" required class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
-              <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">추가</button>
+            <h2 class="study-section-title">이번주 할일</h2>
+            <div class="gl-progress">
+              <div class="gl-bar"><div class="gl-bar-fill" id="weekly-progress-fill"></div></div>
+              <span class="gl-rate" id="weekly-progress-rate">0%</span>
+            </div>
+            <form id="weekly-todo-form" class="gl-add">
+              <input type="text" id="weekly-todo-subject" placeholder="과목" list="subject-list" class="gl-input gl-subject" />
+              <input type="text" id="weekly-todo-content" placeholder="이번주 목표를 입력하세요" required maxlength="100" class="gl-input" />
+              <button type="submit" class="gl-add-btn">추가</button>
             </form>
-            <ul id="weekly-todo-list" class="space-y-2"></ul>
+            <div id="weekly-todo-list"><p class="empty-text">아직 등록된 항목이 없어요.</p></div>
           </div>
-        </section>
+        </div>
+      </div>
 
-        <!-- 시간표 탭 (텐투텐 일일 스케쥴 이식) -->
-        <section id="tab-timetable" class="tab-panel hidden">
+      <!-- 시간표 -->
+      <div class="tab-panel" id="tab-timetable">
+        <div class="tt-wrap" style="max-width:560px;margin:0 auto;padding:20px 16px 40px;width:100%">
           <div class="tt-datebar">
             <div class="tt-date" id="tt-date">날짜</div>
           </div>
-
           <div class="tt-legend" id="tt-legend"></div>
           <div class="tt-grid" id="tt-grid"></div>
           <div class="tt-summary" id="tt-summary"></div>
-
           <button type="button" class="tt-submit" id="tt-submit">오늘 시간표 제출</button>
           <p class="tt-hint">시간 칸을 누르면 선택한 항목으로 칠해집니다. 빈칸 = 기록 없는 시간. (지우개로 비우기)</p>
-        </section>
+        </div>
+      </div>
 
-        <!-- 학습시간 탭 -->
-        <section id="tab-study" class="tab-panel hidden space-y-6">
-          <div>
-            <h2 class="mb-2 font-bold text-brand-dark">학습시간 기록</h2>
-            <form id="study-log-form" class="mb-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] gap-2">
-              <input type="date" id="study-log-date" required class="min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
-              <input type="text" id="study-log-subject" placeholder="과목" list="subject-list" required class="min-w-0 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
-              <input type="number" id="study-log-minutes" placeholder="분" min="1" required class="w-20 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand focus:outline-none" />
-              <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">기록</button>
-            </form>
-            <input type="text" id="study-log-memo" placeholder="메모 (선택)" class="mb-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
-          </div>
-          <div>
-            <h3 class="mb-2 text-sm font-semibold text-slate-500">오늘 과목별 학습시간</h3>
-            <ul id="study-today-summary" class="mb-4 flex flex-wrap gap-2"></ul>
-          </div>
-          <div>
-            <h3 class="mb-2 text-sm font-semibold text-slate-500">최근 기록</h3>
-            <ul id="study-log-list" class="space-y-2"></ul>
-          </div>
-        </section>
-
-        <!-- 목표 탭 -->
-        <section id="tab-goals" class="tab-panel hidden space-y-4">
-          <h2 class="font-bold text-brand-dark">목표 / D-Day</h2>
-          <form id="goal-form" class="space-y-2 rounded-xl bg-white p-4 shadow-sm">
-            <input type="text" id="goal-title" placeholder="목표 (예: 9월 모의고사)" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
-            <div class="flex gap-2">
-              <input type="date" id="goal-date" required class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
-              <input type="text" id="goal-category" placeholder="분류 (선택)" class="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+      <!-- 학습시간 -->
+      <div class="tab-panel" id="tab-study">
+        <div class="study-container">
+          <div class="study-form-card">
+            <div>
+              <h2 class="study-section-title">학습시간 기록</h2>
+              <p class="study-section-desc">오늘 공부한 내용을 기록해두세요.</p>
             </div>
-            <button type="submit" class="w-full rounded-lg bg-brand py-2 text-sm font-semibold text-white">목표 추가</button>
+            <form id="study-log-form" style="display:flex;flex-direction:column;gap:12px">
+              <div class="study-field">
+                <label class="study-label">날짜</label>
+                <input type="date" id="study-log-date" required class="form-input" />
+              </div>
+              <div class="study-field">
+                <label class="study-label">과목</label>
+                <input type="text" id="study-log-subject" placeholder="과목" list="subject-list" required class="form-input" />
+              </div>
+              <div class="study-field">
+                <label class="study-label">학습 시간(분)</label>
+                <input type="number" id="study-log-minutes" placeholder="예: 90" min="1" required class="form-input" />
+              </div>
+              <div class="study-field">
+                <label class="study-label">메모 <span class="study-label-hint">선택</span></label>
+                <input type="text" id="study-log-memo" placeholder="메모 (선택)" class="form-input" />
+              </div>
+              <button type="submit" class="btn-primary btn-full">기록하기</button>
+            </form>
+          </div>
+
+          <div>
+            <h3 class="section-subtitle">오늘 과목별 학습시간</h3>
+            <div id="study-today-summary" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px">
+              <p class="empty-text">오늘 기록이 없어요.</p>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="section-subtitle">최근 기록</h3>
+            <div class="study-log-list" id="study-log-list"><p class="empty-text">아직 기록이 없어요.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 목표 -->
+      <div class="tab-panel" id="tab-goals">
+        <div class="study-container">
+          <h2 class="study-section-title">목표 / D-Day</h2>
+          <form id="goal-form" class="study-form-card" style="gap:12px">
+            <div class="study-field">
+              <label class="study-label">목표</label>
+              <input type="text" id="goal-title" placeholder="목표 (예: 9월 모의고사)" required class="form-input" />
+            </div>
+            <div style="display:flex;gap:8px">
+              <div class="study-field" style="flex:1">
+                <label class="study-label">날짜</label>
+                <input type="date" id="goal-date" required class="form-input" />
+              </div>
+              <div class="study-field" style="flex:1">
+                <label class="study-label">분류 <span class="study-label-hint">선택</span></label>
+                <input type="text" id="goal-category" placeholder="분류" class="form-input" />
+              </div>
+            </div>
+            <button type="submit" class="btn-primary btn-full">목표 추가</button>
           </form>
-          <ul id="goal-list" class="space-y-2"></ul>
-        </section>
-      </main>
+          <div id="goal-list"><p class="empty-text">등록된 목표가 없어요.</p></div>
+        </div>
+      </div>
     </div>
 
     <datalist id="subject-list">
@@ -213,11 +318,41 @@ const SESSION_KEY = 'dcprime_planner_session';
         return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
       }
 
-      // ── 로그인 ──
+      // ── PIN 로그인 (numpad + dots, dcprime.10 login.js 이식) ──
+      const PIN_LENGTH = 4;
+      let pin = '';
+      let busy = false;
+      const dots = Array.from({ length: PIN_LENGTH }, (_, i) => document.getElementById(`dot${i}`)!);
+      const pinDisplay = document.getElementById('pin-display')!;
+      const loginError = document.getElementById('login-error')!;
+      const loginLoading = document.getElementById('login-loading')!;
+
+      function updateDots() {
+        dots.forEach((d, i) => {
+          d.classList.toggle('filled', i < pin.length);
+          d.classList.remove('error');
+        });
+      }
+
+      function showLoginError(msg: string) {
+        dots.forEach((d) => d.classList.add('error'));
+        pinDisplay.classList.remove('shake');
+        void pinDisplay.offsetWidth;
+        pinDisplay.classList.add('shake');
+        loginError.textContent = msg;
+        loginError.classList.add('show');
+        setTimeout(() => {
+          pin = '';
+          updateDots();
+          loginError.classList.remove('show');
+        }, 1400);
+      }
+
       function showApp(session: Session) {
         document.getElementById('login-screen')!.classList.add('hidden');
         document.getElementById('app-screen')!.classList.remove('hidden');
         document.getElementById('student-name')!.textContent = session.name;
+        document.getElementById('student-grade')!.textContent = session.grade ?? '';
         loadTodos();
         loadStudy();
         loadGoals();
@@ -228,71 +363,92 @@ const SESSION_KEY = 'dcprime_planner_session';
         document.getElementById('app-screen')!.classList.add('hidden');
       }
 
-      document.getElementById('login-btn')?.addEventListener('click', async () => {
-        const pinInput = document.getElementById('pin-input') as HTMLInputElement;
-        const pin = pinInput.value.trim();
-        const errorEl = document.getElementById('login-error')!;
-        if (!/^\d{4}$/.test(pin)) {
-          errorEl.classList.remove('hidden');
-          return;
-        }
+      async function submitPin() {
+        if (busy) return;
+        busy = true;
+        loginLoading.classList.add('show');
         const { data, error } = await planner.rpc('verify_pin', { p_pin: pin });
+        loginLoading.classList.remove('show');
         if (!error && data && data.length > 0) {
           const student = data[0];
           const session: Session = { id: student.id, name: student.name, grade: student.grade };
           sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-          errorEl.classList.add('hidden');
-          pinInput.value = '';
+          pin = '';
+          updateDots();
           showApp(session);
         } else {
-          errorEl.classList.remove('hidden');
+          showLoginError('PIN이 올바르지 않습니다.');
         }
-      });
+        busy = false;
+      }
 
-      document.getElementById('pin-input')?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') (document.getElementById('login-btn') as HTMLButtonElement).click();
+      function pressNum(n: string) {
+        if (busy || pin.length >= PIN_LENGTH) return;
+        pin += n;
+        updateDots();
+        if (navigator.vibrate) navigator.vibrate(10);
+        if (pin.length === PIN_LENGTH) setTimeout(submitPin, 100);
+      }
+
+      function pressDelete() {
+        if (busy || !pin.length) return;
+        pin = pin.slice(0, -1);
+        updateDots();
+      }
+
+      document.querySelectorAll('#login-screen .numpad-btn[data-num]').forEach((b) => {
+        b.addEventListener('click', () => pressNum((b as HTMLElement).dataset.num!));
+      });
+      document.getElementById('delete-btn')?.addEventListener('click', pressDelete);
+      document.addEventListener('keydown', (e) => {
+        if (document.getElementById('login-screen')!.classList.contains('hidden')) return;
+        if (e.key >= '0' && e.key <= '9') pressNum(e.key);
+        else if (e.key === 'Backspace') pressDelete();
       });
 
       function doLogout() {
         sessionStorage.removeItem(SESSION_KEY);
-        document.getElementById('mobile-menu')!.classList.add('hidden');
+        closeMenu();
         showLogin();
       }
-
       document.getElementById('logout-btn')?.addEventListener('click', doLogout);
-      document.getElementById('mobile-logout-btn')?.addEventListener('click', doLogout);
+      document.getElementById('hamburger-logout-btn')?.addEventListener('click', doLogout);
 
-      // ── 탭 전환 (데스크톱 탭 바 + 모바일 햄버거 메뉴 공용) ──
-      const TAB_LABELS: Record<string, string> = { todos: '할일', timetable: '시간표', study: '학습시간', goals: '목표' };
+      // ── 탭 전환 + 모바일 드로어 메뉴 (dcprime.10 admin.js 이식) ──
+      const tabBtns = document.querySelectorAll<HTMLElement>('.tab-btn');
+      const panels: Record<string, HTMLElement> = {
+        todos: document.getElementById('tab-todos')!,
+        timetable: document.getElementById('tab-timetable')!,
+        study: document.getElementById('tab-study')!,
+        goals: document.getElementById('tab-goals')!,
+      };
+      const tabBar = document.querySelector('.tab-bar')!;
+      const menuBackdrop = document.createElement('div');
+      menuBackdrop.className = 'menu-backdrop';
+      document.body.appendChild(menuBackdrop);
+      const closeMenu = () => {
+        tabBar.classList.remove('open');
+        menuBackdrop.classList.remove('show');
+      };
+      const openMenu = () => {
+        tabBar.classList.add('open');
+        menuBackdrop.classList.add('show');
+      };
 
-      function switchTab(tab: string) {
-        document.querySelectorAll('.tab-btn').forEach((b) => {
-          const active = (b as HTMLElement).dataset.tab === tab;
-          b.classList.toggle('border-brand', active);
-          b.classList.toggle('text-brand-dark', active);
-          b.classList.toggle('border-transparent', !active);
-          b.classList.toggle('text-slate-400', !active);
-        });
-        document.querySelectorAll('.mobile-tab-btn').forEach((b) => {
-          const active = (b as HTMLElement).dataset.tab === tab;
-          b.classList.toggle('bg-brand-light', active);
-          b.classList.toggle('text-brand-dark', active);
-          b.classList.toggle('text-slate-500', !active);
-        });
-        document.querySelectorAll('.tab-panel').forEach((p) => p.classList.add('hidden'));
-        document.getElementById(`tab-${tab}`)?.classList.remove('hidden');
-        document.getElementById('current-tab-label')!.textContent = TAB_LABELS[tab] ?? '';
-        document.getElementById('mobile-menu')!.classList.add('hidden');
-        if (tab === 'timetable') loadTimetable();
-      }
-
-      document.querySelectorAll('.tab-btn, .mobile-tab-btn').forEach((btn) => {
-        btn.addEventListener('click', () => switchTab((btn as HTMLElement).dataset.tab!));
+      tabBtns.forEach((b) =>
+        b.addEventListener('click', () => {
+          const t = b.dataset.tab!;
+          tabBtns.forEach((x) => x.classList.toggle('active', x.dataset.tab === t));
+          Object.entries(panels).forEach(([k, p]) => p.classList.toggle('active', k === t));
+          closeMenu();
+          if (t === 'timetable') loadTimetable();
+        })
+      );
+      document.getElementById('hamburger-btn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tabBar.classList.contains('open') ? closeMenu() : openMenu();
       });
-
-      document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
-        document.getElementById('mobile-menu')!.classList.toggle('hidden');
-      });
+      menuBackdrop.addEventListener('click', closeMenu);
 
       // ── 할일 ──
       async function loadTodos() {
@@ -305,7 +461,7 @@ const SESSION_KEY = 'dcprime_planner_session';
           .eq('scope', 'daily')
           .eq('item_date', todayStr())
           .order('sort_order');
-        renderTodoList('daily-todo-list', daily ?? []);
+        renderTodoList('daily', daily ?? []);
 
         const { data: weekly } = await planner
           .from('todos')
@@ -314,40 +470,44 @@ const SESSION_KEY = 'dcprime_planner_session';
           .eq('scope', 'weekly')
           .eq('item_date', weekStartStr())
           .order('sort_order');
-        renderTodoList('weekly-todo-list', weekly ?? []);
+        renderTodoList('weekly', weekly ?? []);
       }
 
-      function renderTodoList(elId: string, items: any[]) {
-        const el = document.getElementById(elId)!;
+      function renderTodoList(scope: 'daily' | 'weekly', items: any[]) {
+        const listEl = document.getElementById(`${scope}-todo-list`)!;
+        const fillEl = document.getElementById(`${scope}-progress-fill`)!;
+        const rateEl = document.getElementById(`${scope}-progress-rate`)!;
+        const done = items.filter((t) => t.is_done).length;
+        const rate = items.length ? Math.round((done / items.length) * 100) : 0;
+        fillEl.style.width = `${rate}%`;
+        rateEl.textContent = `${rate}%`;
+
         if (items.length === 0) {
-          el.innerHTML = '<li class="text-sm text-slate-400">아직 등록된 항목이 없어요.</li>';
+          listEl.innerHTML = '<p class="empty-text">아직 등록된 항목이 없어요.</p>';
           return;
         }
-        el.innerHTML = items
+        listEl.innerHTML = items
           .map(
             (t) => `
-          <li class="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-sm">
-            <input type="checkbox" data-id="${t.id}" class="todo-check h-4 w-4 accent-brand" ${t.is_done ? 'checked' : ''} />
-            <span class="flex-1 text-sm ${t.is_done ? 'text-slate-400 line-through' : ''}">
-              ${t.subject ? `<span class="mr-1 rounded bg-brand-light px-1.5 py-0.5 text-xs text-brand-dark">${escHtml(t.subject)}</span>` : ''}${escHtml(t.content)}
+          <div class="gl-item">
+            <div class="gl-check todo-check ${t.is_done ? 'done' : ''}" data-id="${t.id}">${t.is_done ? '✓' : ''}</div>
+            <span class="gl-text ${t.is_done ? 'done' : ''}">
+              ${t.subject ? `<span class="subject-badge" style="background:var(--blue-light);color:var(--blue);margin-right:6px">${escHtml(t.subject)}</span>` : ''}${escHtml(t.content)}
             </span>
-            <button data-id="${t.id}" class="todo-delete text-xs text-slate-300 hover:text-red-400">삭제</button>
-          </li>`
+            <button class="gl-del todo-delete" data-id="${t.id}">삭제</button>
+          </div>`
           )
           .join('');
       }
 
-      document.body.addEventListener('change', async (e) => {
-        const target = e.target as HTMLElement;
-        if (target.classList.contains('todo-check')) {
-          const id = (target as HTMLInputElement).dataset.id!;
-          const checked = (target as HTMLInputElement).checked;
-          await planner.from('todos').update({ is_done: checked }).eq('id', id);
-        }
-      });
-
       document.body.addEventListener('click', async (e) => {
         const target = e.target as HTMLElement;
+        if (target.classList.contains('todo-check')) {
+          const id = target.dataset.id!;
+          const nowDone = !target.classList.contains('done');
+          await planner.from('todos').update({ is_done: nowDone }).eq('id', id);
+          loadTodos();
+        }
         if (target.classList.contains('todo-delete')) {
           const id = target.dataset.id!;
           await planner.from('todos').delete().eq('id', id);
@@ -398,13 +558,13 @@ const SESSION_KEY = 'dcprime_planner_session';
         loadTodos();
       });
 
-      // ── 시간표 (텐투텐 일일 스케쥴 이식 — 상담/지각·결석 탭은 제외) ──
+      // ── 시간표 (텐투텐 일일 스케쥴 이식) ──
       const TT_SUBJECTS = [
-        { key: '스카', color: '#3b82f6' },
-        { key: '식사', color: '#f59e0b' },
-        { key: '학원수업', color: '#10b981' },
-        { key: '기타', color: '#8b5cf6' },
-        { key: '지우개', color: '#cbd2e0', erase: true },
+        { key: '스카', color: '#0064FF' },
+        { key: '식사', color: '#F59E0B' },
+        { key: '학원수업', color: '#00B493' },
+        { key: '기타', color: '#8B5CF6' },
+        { key: '지우개', color: '#D1D6DB', erase: true },
       ];
       // 08:00 ~ 24:00, 30분 단위 (32칸)
       const TT_SLOTS: string[] = [];
@@ -455,7 +615,7 @@ const SESSION_KEY = 'dcprime_planner_session';
         );
       }
 
-      function ttRenderSetup() {
+      function ttRenderSubmitState() {
         const submitBtn = document.getElementById('tt-submit')!;
         if (ttRow.submitted) {
           submitBtn.textContent = '제출 완료 ✓ (다시 제출하기)';
@@ -531,7 +691,7 @@ const SESSION_KEY = 'dcprime_planner_session';
           document.getElementById('tt-submit')?.addEventListener('click', async () => {
             ttRow.submitted = true;
             await ttPersist(session.id, { submitted_at: new Date().toISOString() });
-            ttRenderSetup();
+            ttRenderSubmitState();
             alert('오늘 시간표가 제출되었습니다.');
           });
 
@@ -547,7 +707,7 @@ const SESSION_KEY = 'dcprime_planner_session';
 
         await ttLoadDay(session.id);
         ttRenderLegend();
-        ttRenderSetup();
+        ttRenderSubmitState();
         ttRenderGrid(session.id);
       }
 
@@ -569,10 +729,8 @@ const SESSION_KEY = 'dcprime_planner_session';
         const summaryEl = document.getElementById('study-today-summary')!;
         const entries = Object.entries(bySubject);
         summaryEl.innerHTML = entries.length
-          ? entries
-              .map(([subj, min]) => `<li class="rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand-dark">${escHtml(subj)} ${min}분</li>`)
-              .join('')
-          : '<li class="text-sm text-slate-400">오늘 기록이 없어요.</li>';
+          ? entries.map(([subj, min]) => `<span class="subject-badge" style="background:var(--blue-light);color:var(--blue)">${escHtml(subj)} ${min}분</span>`).join('')
+          : '<p class="empty-text">오늘 기록이 없어요.</p>';
 
         const { data: recent } = await planner
           .from('study_logs')
@@ -586,12 +744,19 @@ const SESSION_KEY = 'dcprime_planner_session';
           ? recent!
               .map(
                 (l: any) => `
-            <li class="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm shadow-sm">
-              <span>${l.log_date} · ${l.subject ? escHtml(l.subject) : '기타'} · ${l.minutes}분${l.memo ? ` · ${escHtml(l.memo)}` : ''}</span>
-            </li>`
+            <div class="study-log-item">
+              <div class="study-log-info">
+                <div class="study-log-top">
+                  <span class="subject-badge" style="background:var(--blue-light);color:var(--blue)">${l.subject ? escHtml(l.subject) : '기타'}</span>
+                  <span class="study-log-hours">${l.minutes}분</span>
+                </div>
+                ${l.memo ? `<p class="study-log-summary">${escHtml(l.memo)}</p>` : ''}
+                <p class="study-log-date">${l.log_date}</p>
+              </div>
+            </div>`
               )
               .join('')
-          : '<li class="text-sm text-slate-400">아직 기록이 없어요.</li>';
+          : '<p class="empty-text">아직 기록이 없어요.</p>';
       }
 
       document.getElementById('study-log-form')?.addEventListener('submit', async (e) => {
@@ -639,17 +804,17 @@ const SESSION_KEY = 'dcprime_planner_session';
           ? data!
               .map(
                 (g: any) => `
-            <li class="flex items-center gap-3 rounded-xl bg-white p-4 shadow-sm">
-              <span class="rounded-lg bg-brand px-2 py-1 text-xs font-bold text-white">${dDayLabel(g.target_date)}</span>
-              <div class="flex-1">
-                <p class="font-semibold">${escHtml(g.title)}</p>
-                <p class="text-xs text-slate-400">${g.target_date}${g.category ? ` · ${escHtml(g.category)}` : ''}</p>
+            <div class="dday-card">
+              <span class="dday-badge">${dDayLabel(g.target_date)}</span>
+              <div style="flex:1">
+                <p class="dday-title">${escHtml(g.title)}</p>
+                <p class="dday-meta">${g.target_date}${g.category ? ` · ${escHtml(g.category)}` : ''}</p>
               </div>
-              <button data-id="${g.id}" class="goal-delete text-xs text-slate-300 hover:text-red-400">삭제</button>
-            </li>`
+              <button data-id="${g.id}" class="gl-del goal-delete">삭제</button>
+            </div>`
               )
               .join('')
-          : '<li class="text-sm text-slate-400">등록된 목표가 없어요.</li>';
+          : '<p class="empty-text">등록된 목표가 없어요.</p>';
       }
 
       document.getElementById('goal-form')?.addEventListener('submit', async (e) => {
