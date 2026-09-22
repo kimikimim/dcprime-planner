@@ -69,15 +69,40 @@ import '../styles/global.css';
     <div class="tab-panel" id="tab-study-overview">
       <div class="admin-panel">
         <div class="panel-toolbar">
-          <h2 class="section-subtitle" style="margin:0">오늘 학습 현황</h2>
+          <h2 class="section-subtitle" style="margin:0">학습 현황</h2>
+        </div>
+        <div class="panel-toolbar">
+          <div class="toolbar-left">
+            <select class="select-input" id="overview-campus-filter">
+              <option value="">전체 캠퍼스</option>
+              <option value="능곡">능곡</option>
+              <option value="장곡">장곡</option>
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <input type="date" class="select-input" id="overview-date-from" />
+            <span style="color:var(--gray-4)">~</span>
+            <input type="date" class="select-input" id="overview-date-to" />
+            <button type="button" class="btn-ghost-sm" id="overview-refresh-btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              새로고침
+            </button>
+          </div>
         </div>
         <div class="student-summary-cards" id="study-summary-cards">
           <p class="empty-text">불러오는 중...</p>
         </div>
-        <h3 class="section-subtitle">최근 기록 (전체 학생)</h3>
-        <div class="study-log-list" id="admin-study-log-list">
-          <p class="empty-text">불러오는 중...</p>
+      </div>
+    </div>
+
+    <!-- 학생 상세 (시간표/목표/인증사진) 모달 -->
+    <div class="modal-overlay" id="detail-modal">
+      <div class="modal modal--form" style="max-height:80vh;display:flex;flex-direction:column">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h3 class="modal-title" style="margin:0" id="detail-modal-title">상세보기</h3>
+          <button type="button" id="detail-modal-close" style="border:none;background:none;font-size:20px;color:var(--gray-3);cursor:pointer">✕</button>
         </div>
+        <div id="detail-modal-content" style="overflow-y:auto;flex:1"></div>
       </div>
     </div>
 
@@ -101,6 +126,14 @@ import '../styles/global.css';
         <div class="form-group">
           <label class="form-label">학년</label>
           <input class="form-input" id="field-grade" type="text" placeholder="고2, 고3" maxlength="10" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">캠퍼스</label>
+          <select class="form-input" id="field-campus">
+            <option value="">선택 안 함</option>
+            <option value="능곡">능곡</option>
+            <option value="장곡">장곡</option>
+          </select>
         </div>
 
         <p class="form-error" id="student-form-error"></p>
@@ -209,7 +242,7 @@ import '../styles/global.css';
             <div class="student-mgmt-avatar">${escHtml((s.name || '?').slice(0, 1))}</div>
             <div class="student-mgmt-info">
               <p class="student-mgmt-name">${escHtml(s.name)}</p>
-              <p class="student-mgmt-meta">${[s.school, s.grade].filter(Boolean).map(escHtml).join(' · ') || '&nbsp;'} · PIN ${escHtml(s.pin)} · ${s.is_active ? '활성' : '비활성'}</p>
+              <p class="student-mgmt-meta">${[s.school, s.grade, s.campus].filter(Boolean).map(escHtml).join(' · ') || '&nbsp;'} · PIN ${escHtml(s.pin)} · ${s.is_active ? '활성' : '비활성'}</p>
             </div>
             <div class="student-mgmt-actions">
               <button type="button" class="btn-edit" data-id="${s.id}">수정</button>
@@ -228,6 +261,7 @@ import '../styles/global.css';
       const fieldPin = document.getElementById('field-pin') as HTMLInputElement;
       const fieldSchool = document.getElementById('field-school') as HTMLInputElement;
       const fieldGrade = document.getElementById('field-grade') as HTMLInputElement;
+      const fieldCampus = document.getElementById('field-campus') as HTMLSelectElement;
       let editingId: string | null = null;
 
       function openStudentModal(student?: any) {
@@ -237,6 +271,7 @@ import '../styles/global.css';
         fieldPin.value = student?.pin ?? '';
         fieldSchool.value = student?.school ?? '';
         fieldGrade.value = student?.grade ?? '';
+        fieldCampus.value = student?.campus ?? '';
         studentFormError.textContent = '';
         studentModal.classList.add('show');
       }
@@ -264,6 +299,7 @@ import '../styles/global.css';
           pin: pinVal,
           school: fieldSchool.value.trim() || null,
           grade: fieldGrade.value.trim() || null,
+          campus: fieldCampus.value || null,
         };
         const { error } = editingId
           ? await planner.from('students').update(payload).eq('id', editingId)
@@ -302,72 +338,172 @@ import '../styles/global.css';
       });
 
       // ── 학습 현황 (dcprime.10 admin.html 학습 현황 탭 이식) ──
-      async function loadStudyOverview() {
-        const cardsEl = document.getElementById('study-summary-cards')!;
-        const listEl = document.getElementById('admin-study-log-list')!;
-        cardsEl.innerHTML = '<p class="empty-text">불러오는 중...</p>';
-        listEl.innerHTML = '<p class="empty-text">불러오는 중...</p>';
+      function dDayLabel(targetDate: string) {
+        const today = new Date(ymdLocal(new Date()));
+        const target = new Date(targetDate);
+        const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
+        if (diff === 0) return 'D-DAY';
+        return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
+      }
 
-        const [{ data: students }, { data: todayLogs }, { data: recent }] = await Promise.all([
-          planner.from('students').select('*').eq('is_active', true).order('name'),
-          planner.from('study_logs').select('*').eq('log_date', studyDayStr()),
-          planner.from('study_logs').select('*, students(name)').order('log_date', { ascending: false }).order('created_at', { ascending: false }).limit(20),
+      function initOverviewDateRange() {
+        const toEl = document.getElementById('overview-date-to') as HTMLInputElement;
+        const fromEl = document.getElementById('overview-date-from') as HTMLInputElement;
+        if (toEl.value && fromEl.value) return;
+        const to = new Date();
+        const from = new Date();
+        from.setDate(from.getDate() - 6);
+        toEl.value = ymdLocal(to);
+        fromEl.value = ymdLocal(from);
+      }
+
+      async function loadStudyOverview() {
+        initOverviewDateRange();
+        const cardsEl = document.getElementById('study-summary-cards')!;
+        cardsEl.innerHTML = '<p class="empty-text">불러오는 중...</p>';
+
+        const campusFilter = (document.getElementById('overview-campus-filter') as HTMLSelectElement).value;
+        const fromDate = (document.getElementById('overview-date-from') as HTMLInputElement).value;
+        const toDate = (document.getElementById('overview-date-to') as HTMLInputElement).value;
+        const todayPlain = ymdLocal(new Date());
+
+        let studentsQuery = planner.from('students').select('*').eq('is_active', true).order('name');
+        if (campusFilter) studentsQuery = studentsQuery.eq('campus', campusFilter);
+        const { data: students } = await studentsQuery;
+
+        if (!students || students.length === 0) {
+          cardsEl.innerHTML = '<p class="empty-text">등록된 학생이 없어요.</p>';
+          return;
+        }
+        const studentIds = students.map((s: any) => s.id);
+
+        const [{ data: logs }, { data: timetablesToday }, { data: goalsAll }] = await Promise.all([
+          planner.from('study_logs').select('*').in('student_id', studentIds).gte('log_date', fromDate).lte('log_date', toDate),
+          planner.from('timetables').select('student_id, submitted').eq('date', todayPlain).in('student_id', studentIds),
+          planner.from('goals').select('student_id').eq('is_active', true).in('student_id', studentIds),
         ]);
 
-        const byStudent = new Map<string, any[]>();
-        (todayLogs ?? []).forEach((l: any) => {
-          if (!byStudent.has(l.student_id)) byStudent.set(l.student_id, []);
-          byStudent.get(l.student_id)!.push(l);
+        const logsByStudent = new Map<string, any[]>();
+        (logs ?? []).forEach((l: any) => {
+          if (!logsByStudent.has(l.student_id)) logsByStudent.set(l.student_id, []);
+          logsByStudent.get(l.student_id)!.push(l);
         });
+        const submittedSet = new Set((timetablesToday ?? []).filter((t: any) => t.submitted).map((t: any) => t.student_id));
+        const goalsCount = new Map<string, number>();
+        (goalsAll ?? []).forEach((g: any) => goalsCount.set(g.student_id, (goalsCount.get(g.student_id) ?? 0) + 1));
 
-        cardsEl.innerHTML = (students ?? []).length
-          ? students!
-              .map((s: any) => {
-                const logs = byStudent.get(s.id) ?? [];
-                const total = logs.reduce((sum: number, l: any) => sum + l.minutes, 0);
-                const bySubject: Record<string, number> = {};
-                logs.forEach((l: any) => {
-                  const k = l.subject || '기타';
-                  bySubject[k] = (bySubject[k] ?? 0) + l.minutes;
-                });
-                const badges = Object.entries(bySubject)
-                  .map(([k, m]) => `<span class="subject-badge" style="background:var(--blue-light);color:var(--blue)">${escHtml(k)} ${m}분</span>`)
-                  .join('');
-                return `
-              <div class="summary-card">
-                <div class="summary-card-top">
-                  <div class="summary-avatar">${escHtml((s.name || '?').slice(0, 1))}</div>
-                  <div>
-                    <p class="summary-name">${escHtml(s.name)}</p>
-                    <p class="summary-grade">${escHtml(s.grade ?? '')}</p>
-                  </div>
-                  <span class="summary-total">${total}분</span>
-                </div>
-                <div class="summary-subjects">${badges || '<span class="empty-text" style="padding:0">오늘 기록 없음</span>'}</div>
-              </div>`;
-              })
-              .join('')
-          : '<p class="empty-text">등록된 학생이 없어요.</p>';
-
-        listEl.innerHTML = (recent ?? []).length
-          ? recent!
-              .map(
-                (l: any) => `
-            <div class="study-log-item">
-              <div class="study-log-info">
-                <div class="study-log-top">
-                  <span class="study-log-student">${escHtml(l.students?.name ?? '알 수 없음')}</span>
-                  <span class="subject-badge" style="background:var(--blue-light);color:var(--blue)">${escHtml(l.subject || '기타')}</span>
-                  <span class="study-log-hours">${l.minutes}분</span>
-                </div>
-                ${l.memo ? `<p class="study-log-summary">${escHtml(l.memo)}</p>` : ''}
-                <p class="study-log-date">${l.log_date}</p>
+        cardsEl.innerHTML = students
+          .map((s: any) => {
+            const studentLogs = logsByStudent.get(s.id) ?? [];
+            const totalHours = (studentLogs.reduce((sum: number, l: any) => sum + l.minutes, 0) / 60).toFixed(1);
+            const bySubject: Record<string, number> = {};
+            studentLogs.forEach((l: any) => {
+              const k = l.subject || '기타';
+              bySubject[k] = (bySubject[k] ?? 0) + l.minutes;
+            });
+            const badges = Object.entries(bySubject)
+              .map(([k, m]) => `<span class="subject-badge" style="background:var(--blue-light);color:var(--blue)">${escHtml(k)} ${(m / 60).toFixed(1)}h</span>`)
+              .join(' ');
+            const submitted = submittedSet.has(s.id);
+            const goalN = goalsCount.get(s.id) ?? 0;
+            return `
+          <div class="summary-card">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <p class="summary-name">${escHtml(s.name)}</p>
+                <p class="summary-grade">${[s.grade, s.campus].filter(Boolean).map(escHtml).join(' · ')}</p>
               </div>
-            </div>`
-              )
-              .join('')
-          : '<p class="empty-text">기록이 없어요.</p>';
+              <span class="summary-total">${totalHours}h</span>
+            </div>
+            <div style="margin-bottom:12px">${badges || '<span class="empty-text" style="padding:0;display:inline-block">기록 없음</span>'}</div>
+            <div style="display:flex;gap:12px;font-size:12px;color:var(--gray-3);margin-bottom:12px">
+              <span>시간표 제출 <b style="color:${submitted ? 'var(--green)' : 'var(--red)'}">${submitted ? '완료' : '미제출'}</b></span>
+              <span>목표 작성 <b style="color:var(--black)">${goalN}개</b></span>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button type="button" class="btn-ghost-sm" data-action="timetable" data-id="${s.id}" data-name="${escHtml(s.name)}">시간표 보기</button>
+              <button type="button" class="btn-ghost-sm" data-action="goals" data-id="${s.id}" data-name="${escHtml(s.name)}">목표 보기</button>
+              <button type="button" class="btn-ghost-sm" data-action="photos" data-id="${s.id}" data-name="${escHtml(s.name)}">인증사진 모아보기</button>
+            </div>
+          </div>`;
+          })
+          .join('');
       }
+
+      document.getElementById('overview-refresh-btn')?.addEventListener('click', loadStudyOverview);
+      document.getElementById('overview-campus-filter')?.addEventListener('change', loadStudyOverview);
+      document.getElementById('overview-date-from')?.addEventListener('change', loadStudyOverview);
+      document.getElementById('overview-date-to')?.addEventListener('change', loadStudyOverview);
+
+      // ── 학생 상세 모달 (시간표 / 목표 / 인증사진) ──
+      const detailModal = document.getElementById('detail-modal')!;
+      const detailTitle = document.getElementById('detail-modal-title')!;
+      const detailContent = document.getElementById('detail-modal-content')!;
+
+      document.getElementById('detail-modal-close')?.addEventListener('click', () => detailModal.classList.remove('show'));
+
+      document.getElementById('study-summary-cards')?.addEventListener('click', async (e) => {
+        const btn = (e.target as HTMLElement).closest('button[data-action]') as HTMLElement | null;
+        if (!btn) return;
+        const id = btn.dataset.id!;
+        const name = btn.dataset.name!;
+        const action = btn.dataset.action!;
+        detailContent.innerHTML = '<p class="empty-text">불러오는 중...</p>';
+        detailModal.classList.add('show');
+
+        if (action === 'timetable') {
+          detailTitle.textContent = `${name} 학생 시간표 (오늘)`;
+          const { data } = await planner.from('timetables').select('*').eq('student_id', id).eq('date', ymdLocal(new Date())).maybeSingle();
+          const slots: Record<string, string> = data?.slots ?? {};
+          const entries = Object.entries(slots).sort(([a], [b]) => a.localeCompare(b));
+          const statusRow = `<p style="font-size:12px;color:var(--gray-3);margin-bottom:10px">제출 상태: <b style="color:${data?.submitted ? 'var(--green)' : 'var(--red)'}">${data?.submitted ? '완료' : '미제출'}</b></p>`;
+          detailContent.innerHTML =
+            statusRow +
+            (entries.length
+              ? entries
+                  .map(([time, val]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-7);font-size:13px"><span>${escHtml(time)}</span><span>${escHtml(val)}</span></div>`)
+                  .join('')
+              : '<p class="empty-text">아직 칠한 시간이 없어요.</p>');
+        }
+
+        if (action === 'goals') {
+          detailTitle.textContent = `${name} 학생 목표`;
+          const { data } = await planner.from('goals').select('*').eq('student_id', id).eq('is_active', true).order('target_date', { ascending: true });
+          detailContent.innerHTML = (data ?? []).length
+            ? data!
+                .map(
+                  (g: any) => `
+              <div class="dday-card">
+                <span class="dday-badge">${dDayLabel(g.target_date)}</span>
+                <div style="flex:1">
+                  <p class="dday-title">${escHtml(g.title)}</p>
+                  <p class="dday-meta">${g.target_date}${g.category ? ` · ${escHtml(g.category)}` : ''}</p>
+                </div>
+              </div>`
+                )
+                .join('')
+            : '<p class="empty-text">등록된 목표가 없어요.</p>';
+        }
+
+        if (action === 'photos') {
+          detailTitle.textContent = `${name} 학생 인증사진`;
+          const fromDate = (document.getElementById('overview-date-from') as HTMLInputElement).value;
+          const toDate = (document.getElementById('overview-date-to') as HTMLInputElement).value;
+          const { data } = await planner
+            .from('study_logs')
+            .select('*')
+            .eq('student_id', id)
+            .gte('log_date', fromDate)
+            .lte('log_date', toDate)
+            .not('image_url', 'is', null)
+            .order('log_date', { ascending: false });
+          detailContent.innerHTML = (data ?? []).length
+            ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${data!
+                .map((l: any) => `<a href="${l.image_url}" target="_blank" rel="noopener"><img src="${l.image_url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px" /></a>`)
+                .join('')}</div>`
+            : '<p class="empty-text">해당 기간에 등록된 사진이 없어요.</p>';
+        }
+      });
 
       if (sessionStorage.getItem(SESSION_KEY) === 'ok') {
         loadStudents();

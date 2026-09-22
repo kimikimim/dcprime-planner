@@ -207,3 +207,31 @@ drop policy if exists "anon all timetables" on planner.timetables;
 create policy "anon all timetables" on planner.timetables
   for all to anon using (true) with check (true);
 grant select, insert, update, delete on planner.timetables to anon;
+
+-- ────────────────────────────────────────────
+-- 8. 학습 인증 사진 (study_logs.image_url) + 스토리지 버킷
+-- ────────────────────────────────────────────
+alter table planner.study_logs add column if not exists image_url text;
+
+insert into storage.buckets (id, name, public)
+values ('study-photos', 'study-photos', true)
+on conflict (id) do nothing;
+
+drop policy if exists "public read study-photos" on storage.objects;
+drop policy if exists "anon insert study-photos" on storage.objects;
+drop policy if exists "anon update study-photos" on storage.objects;
+drop policy if exists "anon delete study-photos" on storage.objects;
+
+create policy "public read study-photos" on storage.objects
+  for select to public using (bucket_id = 'study-photos');
+create policy "anon insert study-photos" on storage.objects
+  for insert to anon with check (bucket_id = 'study-photos');
+create policy "anon update study-photos" on storage.objects
+  for update to anon using (bucket_id = 'study-photos');
+create policy "anon delete study-photos" on storage.objects
+  for delete to anon using (bucket_id = 'study-photos');
+
+-- ────────────────────────────────────────────
+-- 9. students.campus (관리자 학습현황 캠퍼스 필터용)
+-- ────────────────────────────────────────────
+alter table planner.students add column if not exists campus text; -- 능곡 / 장곡

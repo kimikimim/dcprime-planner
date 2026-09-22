@@ -202,6 +202,58 @@ img { display: block; }
 .study-label-required { color: var(--blue); margin-left: 2px; }
 .study-log-student { font-size: 13px; font-weight: 700; color: var(--black); }
 
+/* ── 학습 인증 (사진 업로드, 과목 선택, 시간 칩) ── */
+.upload-area { border: 2px dashed var(--gray-5); border-radius: var(--r-lg); background: var(--white); min-height: 180px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color .2s, background .2s; overflow: hidden; position: relative; }
+.upload-area:hover, .upload-area.drag-over { border-color: var(--blue); background: var(--blue-light); }
+.upload-placeholder { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; }
+.upload-icon { color: var(--gray-3); }
+.upload-text { font-size: 15px; font-weight: 600; color: var(--gray-2); }
+.upload-subtext { font-size: 12px; color: var(--gray-4); }
+.upload-preview { width: 100%; max-height: 300px; object-fit: contain; display: none; border-radius: 12px; }
+.change-photo-btn { margin-top: 6px; align-self: flex-start; }
+
+.study-select {
+  height: 48px; padding: 0 40px 0 14px; background: var(--gray-8);
+  border: 1.5px solid var(--gray-6); border-radius: var(--r-sm);
+  font-size: 15px; font-weight: 500; color: var(--black);
+  cursor: pointer; transition: border-color .15s; width: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%238B95A1' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.study-select:focus { border-color: var(--blue); background-color: var(--white); }
+
+.study-hours-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.hours-chip {
+  height: 38px; border-radius: var(--r-sm); font-size: 13px; font-weight: 600;
+  color: var(--gray-2); background: var(--gray-8); border: 1.5px solid var(--gray-6);
+  transition: all .15s; white-space: nowrap;
+}
+.hours-chip:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+.hours-chip.active { background: var(--blue); color: var(--white); border-color: var(--blue); }
+
+.study-textarea {
+  width: 100%; padding: 12px 14px; background: var(--gray-8);
+  border: 1.5px solid var(--gray-6); border-radius: var(--r-sm);
+  font-size: 14px; color: var(--black); line-height: 1.6; resize: none;
+  transition: border-color .15s;
+}
+.study-textarea:focus { border-color: var(--blue); background: var(--white); }
+.study-textarea::placeholder { color: var(--gray-4); }
+.study-form-error { font-size: 13px; color: var(--red); font-weight: 500; min-height: 18px; }
+
+.study-log-thumb { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+.study-log-thumb--empty { display: flex; align-items: center; justify-content: center; background: var(--gray-7); color: var(--gray-4); }
+
+/* ── 목표 / D-Day (학생/관리자 공용) ── */
+.dday-card { display: flex; align-items: center; gap: 12px; background: var(--white); border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 8px; box-shadow: var(--shadow-sm); }
+.dday-badge { flex-shrink: 0; background: var(--blue); color: #fff; font-size: 12px; font-weight: 800; border-radius: 8px; padding: 6px 10px; }
+.dday-title { font-size: 14px; font-weight: 700; color: var(--black); }
+.dday-meta { font-size: 11px; color: var(--gray-4); margin-top: 2px; }
+
+@media (max-width: 400px) {
+  .study-hours-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
 /* ============================================================
    원장(관리자) 페이지
    ============================================================ */

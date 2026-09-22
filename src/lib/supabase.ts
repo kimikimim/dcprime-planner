@@ -16,3 +16,6 @@ const client = createClient(supabaseUrl, supabaseAnonKey, {
 
 // 플래너 전용 테이블/RPC는 전부 `planner` 스키마에 있음 (dcprime-academy 메인 DB와 공유, 스키마로만 분리)
 export const planner = client.schema('planner');
+
+// Storage는 스키마 스코프가 없어서 루트 클라이언트로 접근 (예: 학습 인증 사진 업로드)
+export const supabase = client;

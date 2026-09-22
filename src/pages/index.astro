@@ -67,10 +67,6 @@ import '../styles/global.css';
       .study-log-date { font-size: 11px; color: var(--gray-4); }
 
       /* ── 목표 / D-Day ── */
-      .dday-card { display: flex; align-items: center; gap: 12px; background: var(--white); border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 8px; box-shadow: var(--shadow-sm); }
-      .dday-badge { flex-shrink: 0; background: var(--blue); color: #fff; font-size: 12px; font-weight: 800; border-radius: 8px; padding: 6px 10px; }
-      .dday-title { font-size: 14px; font-weight: 700; color: var(--black); }
-      .dday-meta { font-size: 11px; color: var(--gray-4); margin-top: 2px; }
     </style>
   </head>
   <body>
@@ -215,27 +211,60 @@ import '../styles/global.css';
         <div class="study-container">
           <div class="study-form-card">
             <div>
-              <h2 class="study-section-title">학습시간 기록</h2>
+              <h2 class="study-section-title">오늘 학습 인증</h2>
               <p class="study-section-desc">오늘 공부한 내용을 기록해두세요.</p>
             </div>
-            <form id="study-log-form" style="display:flex;flex-direction:column;gap:12px">
+            <form id="study-log-form" style="display:flex;flex-direction:column;gap:18px">
               <div class="study-field">
-                <label class="study-label">날짜</label>
-                <input type="date" id="study-log-date" required class="form-input" />
+                <label class="study-label">공부 사진 <span class="study-label-hint">선택</span></label>
+                <div class="upload-area" id="upload-area">
+                  <input type="file" id="study-photo-input" accept="image/jpeg,image/png,image/webp" capture="environment" hidden />
+                  <div class="upload-placeholder" id="upload-placeholder">
+                    <div class="upload-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /><circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="1.8" /></svg></div>
+                    <p class="upload-text">탭하여 사진 추가</p>
+                    <p class="upload-subtext">JPEG, PNG, WEBP · 최대 15MB</p>
+                  </div>
+                  <img class="upload-preview" id="upload-preview" alt="" />
+                </div>
+                <button type="button" class="btn-ghost-sm change-photo-btn hidden" id="change-photo-btn">사진 변경</button>
               </div>
+
               <div class="study-field">
-                <label class="study-label">과목</label>
-                <input type="text" id="study-log-subject" placeholder="과목" list="subject-list" required class="form-input" />
+                <label class="study-label">과목 <span class="study-label-required">*</span></label>
+                <select class="study-select" id="study-log-subject" required>
+                  <option value="">과목을 선택하세요</option>
+                  <option>국어</option>
+                  <option>영어</option>
+                  <option>수학</option>
+                  <option>과학</option>
+                  <option>사회</option>
+                  <option>기타</option>
+                </select>
               </div>
+
               <div class="study-field">
-                <label class="study-label">학습 시간(분)</label>
-                <input type="number" id="study-log-minutes" placeholder="예: 90" min="1" required class="form-input" />
+                <label class="study-label">학습 시간 <span class="study-label-required">*</span></label>
+                <div class="study-hours-grid" id="study-hours-grid">
+                  <button type="button" class="hours-chip" data-value="0.5">0.5시간</button>
+                  <button type="button" class="hours-chip" data-value="1">1시간</button>
+                  <button type="button" class="hours-chip" data-value="1.5">1.5시간</button>
+                  <button type="button" class="hours-chip" data-value="2">2시간</button>
+                  <button type="button" class="hours-chip" data-value="2.5">2.5시간</button>
+                  <button type="button" class="hours-chip" data-value="3">3시간</button>
+                  <button type="button" class="hours-chip" data-value="3.5">3.5시간</button>
+                  <button type="button" class="hours-chip" data-value="4">4시간</button>
+                  <button type="button" class="hours-chip" data-value="5">5시간</button>
+                  <button type="button" class="hours-chip" data-value="6">6시간+</button>
+                </div>
               </div>
+
               <div class="study-field">
-                <label class="study-label">메모 <span class="study-label-hint">선택</span></label>
-                <input type="text" id="study-log-memo" placeholder="메모 (선택)" class="form-input" />
+                <label class="study-label">학습 내용 메모 <span class="study-label-hint">선택</span></label>
+                <textarea class="study-textarea" id="study-log-memo" placeholder="오늘 공부한 내용, 어려웠던 점 등을 적어보세요." rows="3" maxlength="500"></textarea>
               </div>
-              <button type="submit" class="btn-primary btn-full">기록하기</button>
+
+              <p class="study-form-error" id="study-form-error"></p>
+              <button type="submit" class="btn-primary btn-full" id="study-log-submit">저장하기</button>
             </form>
           </div>
 
@@ -290,7 +319,7 @@ import '../styles/global.css';
     </datalist>
 
     <script>
-      import { planner } from '../lib/supabase';
+      import { planner, supabase } from '../lib/supabase';
 
       const SESSION_KEY = 'dcprime_planner_session';
       const ADMIN_SESSION_KEY = 'dcprime_planner_admin_session';
@@ -766,6 +795,11 @@ import '../styles/global.css';
               .map(
                 (l: any) => `
             <div class="study-log-item">
+              ${
+                l.image_url
+                  ? `<img class="study-log-thumb" src="${l.image_url}" alt="" />`
+                  : `<div class="study-log-thumb study-log-thumb--empty">📷</div>`
+              }
               <div class="study-log-info">
                 <div class="study-log-top">
                   <span class="subject-badge" style="background:var(--blue-light);color:var(--blue)">${l.subject ? escHtml(l.subject) : '기타'}</span>
@@ -779,25 +813,111 @@ import '../styles/global.css';
           : '<p class="empty-text">오늘 기록이 없어요.</p>';
       }
 
+      // ── 학습 인증 폼: 사진 업로드 + 시간 칩 ──
+      let selectedHours: number | null = null;
+      let selectedPhotoFile: File | null = null;
+
+      const uploadArea = document.getElementById('upload-area')!;
+      const photoInput = document.getElementById('study-photo-input') as HTMLInputElement;
+      const uploadPlaceholder = document.getElementById('upload-placeholder')!;
+      const uploadPreview = document.getElementById('upload-preview') as HTMLImageElement;
+      const changePhotoBtn = document.getElementById('change-photo-btn')!;
+
+      uploadArea.addEventListener('click', () => {
+        if (!selectedPhotoFile) photoInput.click();
+      });
+      changePhotoBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        photoInput.click();
+      });
+      photoInput.addEventListener('change', () => {
+        const file = photoInput.files?.[0];
+        if (!file) return;
+        if (file.size > 15 * 1024 * 1024) {
+          alert('사진은 최대 15MB까지 업로드할 수 있어요.');
+          photoInput.value = '';
+          return;
+        }
+        selectedPhotoFile = file;
+        const reader = new FileReader();
+        reader.onload = () => {
+          uploadPreview.src = reader.result as string;
+          uploadPreview.style.display = 'block';
+          uploadPlaceholder.style.display = 'none';
+          changePhotoBtn.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      });
+
+      document.querySelectorAll('#study-hours-grid .hours-chip').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#study-hours-grid .hours-chip').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          selectedHours = parseFloat((btn as HTMLElement).dataset.value!);
+        });
+      });
+
+      function resetStudyForm() {
+        (document.getElementById('study-log-form') as HTMLFormElement).reset();
+        selectedHours = null;
+        selectedPhotoFile = null;
+        photoInput.value = '';
+        uploadPreview.src = '';
+        uploadPreview.style.display = 'none';
+        uploadPlaceholder.style.display = 'flex';
+        changePhotoBtn.classList.add('hidden');
+        document.querySelectorAll('#study-hours-grid .hours-chip').forEach((b) => b.classList.remove('active'));
+      }
+
       document.getElementById('study-log-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const session = getSession();
         if (!session) return;
-        const date = (document.getElementById('study-log-date') as HTMLInputElement).value;
-        const subject = (document.getElementById('study-log-subject') as HTMLInputElement).value.trim();
-        const minutesEl = document.getElementById('study-log-minutes') as HTMLInputElement;
-        const memoEl = document.getElementById('study-log-memo') as HTMLInputElement;
-        const minutes = parseInt(minutesEl.value, 10);
-        if (!date || !minutes) return;
+        const errorEl = document.getElementById('study-form-error')!;
+        const subjectEl = document.getElementById('study-log-subject') as HTMLSelectElement;
+        const memoEl = document.getElementById('study-log-memo') as HTMLTextAreaElement;
+        const submitBtn = document.getElementById('study-log-submit') as HTMLButtonElement;
+
+        const subject = subjectEl.value;
+        if (!subject) {
+          errorEl.textContent = '과목을 선택해주세요.';
+          return;
+        }
+        if (!selectedHours) {
+          errorEl.textContent = '학습 시간을 선택해주세요.';
+          return;
+        }
+        errorEl.textContent = '';
+        submitBtn.disabled = true;
+        submitBtn.textContent = '저장 중...';
+
+        let imageUrl: string | null = null;
+        if (selectedPhotoFile) {
+          const ext = selectedPhotoFile.name.split('.').pop() || 'jpg';
+          const path = `${session.id}/${Date.now()}.${ext}`;
+          const { error: uploadError } = await supabase.storage.from('study-photos').upload(path, selectedPhotoFile);
+          if (uploadError) {
+            errorEl.textContent = '사진 업로드에 실패했어요: ' + uploadError.message;
+            submitBtn.disabled = false;
+            submitBtn.textContent = '저장하기';
+            return;
+          }
+          const { data: pub } = supabase.storage.from('study-photos').getPublicUrl(path);
+          imageUrl = pub.publicUrl;
+        }
+
         await planner.from('study_logs').insert({
           student_id: session.id,
-          log_date: date,
-          subject: subject || null,
-          minutes,
+          log_date: studyDayStr(),
+          subject,
+          minutes: Math.round(selectedHours * 60),
           memo: memoEl.value.trim() || null,
+          image_url: imageUrl,
         });
-        minutesEl.value = '';
-        memoEl.value = '';
+
+        submitBtn.disabled = false;
+        submitBtn.textContent = '저장하기';
+        resetStudyForm();
         loadStudy();
       });
 
@@ -858,7 +978,6 @@ import '../styles/global.css';
       });
 
       // ── 초기화 ──
-      (document.getElementById('study-log-date') as HTMLInputElement).value = studyDayStr();
       if (sessionStorage.getItem(ADMIN_SESSION_KEY) === 'ok') {
         location.replace('/admin');
       } else {
