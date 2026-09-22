@@ -69,25 +69,11 @@ import '../styles/global.css';
     <div class="tab-panel" id="tab-study-overview">
       <div class="admin-panel">
         <div class="panel-toolbar">
-          <h2 class="section-subtitle" style="margin:0">학습 현황</h2>
-        </div>
-        <div class="panel-toolbar">
-          <div class="toolbar-left">
-            <select class="select-input" id="overview-campus-filter">
-              <option value="">전체 캠퍼스</option>
-              <option value="능곡">능곡</option>
-              <option value="장곡">장곡</option>
-            </select>
-          </div>
-          <div class="toolbar-right">
-            <input type="date" class="select-input" id="overview-date-from" />
-            <span style="color:var(--gray-4)">~</span>
-            <input type="date" class="select-input" id="overview-date-to" />
-            <button type="button" class="btn-ghost-sm" id="overview-refresh-btn">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-              새로고침
-            </button>
-          </div>
+          <h2 class="section-subtitle" style="margin:0">학습 현황 <span style="font-weight:400;color:var(--gray-4)">· 최근 7일</span></h2>
+          <button type="button" class="btn-ghost-sm" id="overview-refresh-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            새로고침
+          </button>
         </div>
         <div class="student-summary-cards" id="study-summary-cards">
           <p class="empty-text">불러오는 중...</p>
@@ -346,30 +332,22 @@ import '../styles/global.css';
         return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
       }
 
-      function initOverviewDateRange() {
-        const toEl = document.getElementById('overview-date-to') as HTMLInputElement;
-        const fromEl = document.getElementById('overview-date-from') as HTMLInputElement;
-        if (toEl.value && fromEl.value) return;
+      // 학습현황은 항상 최근 7일(오늘 포함) 기준, 전체 학생 대상으로 고정
+      function overviewDateRange() {
         const to = new Date();
         const from = new Date();
         from.setDate(from.getDate() - 6);
-        toEl.value = ymdLocal(to);
-        fromEl.value = ymdLocal(from);
+        return { from: ymdLocal(from), to: ymdLocal(to) };
       }
 
       async function loadStudyOverview() {
-        initOverviewDateRange();
         const cardsEl = document.getElementById('study-summary-cards')!;
         cardsEl.innerHTML = '<p class="empty-text">불러오는 중...</p>';
 
-        const campusFilter = (document.getElementById('overview-campus-filter') as HTMLSelectElement).value;
-        const fromDate = (document.getElementById('overview-date-from') as HTMLInputElement).value;
-        const toDate = (document.getElementById('overview-date-to') as HTMLInputElement).value;
+        const { from: fromDate, to: toDate } = overviewDateRange();
         const todayPlain = ymdLocal(new Date());
 
-        let studentsQuery = planner.from('students').select('*').eq('is_active', true).order('name');
-        if (campusFilter) studentsQuery = studentsQuery.eq('campus', campusFilter);
-        const { data: students } = await studentsQuery;
+        const { data: students } = await planner.from('students').select('*').eq('is_active', true).order('name');
 
         if (!students || students.length === 0) {
           cardsEl.innerHTML = '<p class="empty-text">등록된 학생이 없어요.</p>';
@@ -431,9 +409,6 @@ import '../styles/global.css';
       }
 
       document.getElementById('overview-refresh-btn')?.addEventListener('click', loadStudyOverview);
-      document.getElementById('overview-campus-filter')?.addEventListener('change', loadStudyOverview);
-      document.getElementById('overview-date-from')?.addEventListener('change', loadStudyOverview);
-      document.getElementById('overview-date-to')?.addEventListener('change', loadStudyOverview);
 
       // ── 학생 상세 모달 (시간표 / 목표 / 인증사진) ──
       const detailModal = document.getElementById('detail-modal')!;
@@ -487,8 +462,7 @@ import '../styles/global.css';
 
         if (action === 'photos') {
           detailTitle.textContent = `${name} 학생 인증사진`;
-          const fromDate = (document.getElementById('overview-date-from') as HTMLInputElement).value;
-          const toDate = (document.getElementById('overview-date-to') as HTMLInputElement).value;
+          const { from: fromDate, to: toDate } = overviewDateRange();
           const { data } = await planner
             .from('study_logs')
             .select('*')
