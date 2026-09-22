@@ -74,6 +74,26 @@ end;
 $$;
 grant execute on function planner.verify_admin_password(text) to anon;
 
+-- 학생 PIN이 관리자 비밀번호와 같으면 로그인 화면에서 학생으로 먼저 인식돼
+-- 관리자 진입이 막히므로, 학생 PIN 등록/수정 시 미리 차단
+create or replace function planner.block_admin_pin()
+returns trigger
+language plpgsql
+security definer
+set search_path = planner, pg_temp
+as $$
+begin
+  if exists (select 1 from planner.admin_config where key = 'admin_password' and value = new.pin) then
+    raise exception 'PIN을 사용할 수 없습니다. 다른 번호를 선택해주세요.';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists trg_block_admin_pin on planner.students;
+create trigger trg_block_admin_pin
+  before insert or update of pin on planner.students
+  for each row execute function planner.block_admin_pin();
+
 -- 관리자 화면(students 테이블 CRUD)은 RLS 정책 없이 위 RPC로 세션 게이트만 하고,
 -- anon 직접 접근은 dcprime-academy의 admin_config/adminssh 방식과 동일하게
 -- "테이블 자체는 잠그고 관리자 페이지에서만 별도 처리"하는 대신,

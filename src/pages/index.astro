@@ -293,6 +293,7 @@ import '../styles/global.css';
       import { planner } from '../lib/supabase';
 
       const SESSION_KEY = 'dcprime_planner_session';
+      const ADMIN_SESSION_KEY = 'dcprime_planner_admin_session';
 
       type Session = { id: string; name: string; grade: string | null };
 
@@ -368,17 +369,26 @@ import '../styles/global.css';
         busy = true;
         loginLoading.classList.add('show');
         const { data, error } = await planner.rpc('verify_pin', { p_pin: pin });
-        loginLoading.classList.remove('show');
         if (!error && data && data.length > 0) {
+          loginLoading.classList.remove('show');
           const student = data[0];
           const session: Session = { id: student.id, name: student.name, grade: student.grade };
           sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
           pin = '';
           updateDots();
           showApp(session);
-        } else {
-          showLoginError('PIN이 올바르지 않습니다.');
+          busy = false;
+          return;
         }
+        // 학생 PIN이 아니면 관리자 비밀번호로도 확인 (같은 로그인 화면에서 진입)
+        const { data: isAdmin } = await planner.rpc('verify_admin_password', { pw: pin });
+        loginLoading.classList.remove('show');
+        if (isAdmin === true) {
+          sessionStorage.setItem(ADMIN_SESSION_KEY, 'ok');
+          location.href = '/admin';
+          return;
+        }
+        showLoginError('PIN이 올바르지 않습니다.');
         busy = false;
       }
 
@@ -839,8 +849,12 @@ import '../styles/global.css';
 
       // ── 초기화 ──
       (document.getElementById('study-log-date') as HTMLInputElement).value = todayStr();
-      const existing = getSession();
-      if (existing) showApp(existing);
+      if (sessionStorage.getItem(ADMIN_SESSION_KEY) === 'ok') {
+        location.replace('/admin');
+      } else {
+        const existing = getSession();
+        if (existing) showApp(existing);
+      }
     </script>
   </body>
 </html>

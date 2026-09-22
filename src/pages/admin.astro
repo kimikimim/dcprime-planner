@@ -16,51 +16,7 @@ import '../styles/global.css';
     <link rel="icon" type="image/png" href="/favicon-circle.png" />
   </head>
   <body class="admin-body">
-    <!-- 로그인 -->
-    <div class="login-body" id="login-screen">
-      <div class="login-container">
-        <div class="login-logo">
-          <img src="/favicon-circle.png" alt="대치프라임" style="width:56px;height:56px;border-radius:50%;object-fit:cover" />
-          <span class="logo-text">DC Prime 플래너</span>
-        </div>
-        <div class="login-header">
-          <h1 class="login-title">관리자<br />비밀번호를 입력하세요</h1>
-          <p class="login-subtitle">4자리 번호를 눌러주세요</p>
-        </div>
-        <div class="pin-display" id="pin-display">
-          <div class="pin-dot" id="dot0"></div>
-          <div class="pin-dot" id="dot1"></div>
-          <div class="pin-dot" id="dot2"></div>
-          <div class="pin-dot" id="dot3"></div>
-        </div>
-        <p class="error-message" id="login-error"></p>
-        <div class="numpad">
-          <button type="button" class="numpad-btn" data-num="1">1</button>
-          <button type="button" class="numpad-btn" data-num="2">2<span class="numpad-sub">ABC</span></button>
-          <button type="button" class="numpad-btn" data-num="3">3<span class="numpad-sub">DEF</span></button>
-          <button type="button" class="numpad-btn" data-num="4">4<span class="numpad-sub">GHI</span></button>
-          <button type="button" class="numpad-btn" data-num="5">5<span class="numpad-sub">JKL</span></button>
-          <button type="button" class="numpad-btn" data-num="6">6<span class="numpad-sub">MNO</span></button>
-          <button type="button" class="numpad-btn" data-num="7">7<span class="numpad-sub">PQRS</span></button>
-          <button type="button" class="numpad-btn" data-num="8">8<span class="numpad-sub">TUV</span></button>
-          <button type="button" class="numpad-btn" data-num="9">9<span class="numpad-sub">WXYZ</span></button>
-          <div class="numpad-empty"></div>
-          <button type="button" class="numpad-btn" data-num="0">0</button>
-          <button type="button" class="numpad-btn numpad-del" id="delete-btn" aria-label="지우기">
-            <svg width="22" height="16" viewBox="0 0 22 16" fill="none">
-              <path d="M8 1H20C20.5523 1 21 1.44772 21 2V14C21 14.5523 20.5523 15 20 15H8L1 8L8 1Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
-              <path d="M13 6L17 10M17 6L13 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-            </svg>
-          </button>
-        </div>
-        <div class="login-loading" id="login-loading">
-          <div class="loading-spinner"></div>
-          <span>확인 중...</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 관리 화면 -->
+    <!-- 로그인은 `/`에서 PIN으로 통합 (여기 직접 들어오면 세션 없을 때 `/`로 리다이렉트) -->
     <div id="admin-panel" class="hidden">
       <header class="admin-header">
         <div class="admin-header-inner">
@@ -137,83 +93,9 @@ import '../styles/global.css';
       import { planner } from '../lib/supabase';
 
       const SESSION_KEY = 'dcprime_planner_admin_session';
-      const PIN_LENGTH = 4;
-      let pin = '';
-      let busy = false;
-
-      const dots = Array.from({ length: PIN_LENGTH }, (_, i) => document.getElementById(`dot${i}`)!);
-      const pinDisplay = document.getElementById('pin-display')!;
-      const errorMsg = document.getElementById('login-error')!;
-      const loading = document.getElementById('login-loading')!;
-
-      function updateDots() {
-        dots.forEach((d, i) => {
-          d.classList.toggle('filled', i < pin.length);
-          d.classList.remove('error');
-        });
-      }
-
-      function showError(msg: string) {
-        dots.forEach((d) => d.classList.add('error'));
-        pinDisplay.classList.remove('shake');
-        void pinDisplay.offsetWidth;
-        pinDisplay.classList.add('shake');
-        errorMsg.textContent = msg;
-        errorMsg.classList.add('show');
-        setTimeout(() => {
-          pin = '';
-          updateDots();
-          errorMsg.classList.remove('show');
-        }, 1400);
-      }
 
       function escHtml(str: string) {
         return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-      }
-
-      async function submitPin() {
-        if (busy) return;
-        busy = true;
-        loading.classList.add('show');
-        const { data, error } = await planner.rpc('verify_admin_password', { pw: pin });
-        loading.classList.remove('show');
-        if (!error && data === true) {
-          sessionStorage.setItem(SESSION_KEY, 'ok');
-          showPanel();
-        } else {
-          showError('비밀번호가 올바르지 않습니다.');
-          pin = '';
-        }
-        busy = false;
-      }
-
-      function pressNum(n: string) {
-        if (busy || pin.length >= PIN_LENGTH) return;
-        pin += n;
-        updateDots();
-        if (navigator.vibrate) navigator.vibrate(10);
-        if (pin.length === PIN_LENGTH) setTimeout(submitPin, 100);
-      }
-
-      function pressDelete() {
-        if (busy || !pin.length) return;
-        pin = pin.slice(0, -1);
-        updateDots();
-      }
-
-      document.querySelectorAll('.numpad-btn[data-num]').forEach((b) => {
-        b.addEventListener('click', () => pressNum((b as HTMLElement).dataset.num!));
-      });
-      document.getElementById('delete-btn')?.addEventListener('click', pressDelete);
-      document.addEventListener('keydown', (e) => {
-        if (e.key >= '0' && e.key <= '9') pressNum(e.key);
-        else if (e.key === 'Backspace') pressDelete();
-      });
-
-      function showPanel() {
-        document.getElementById('login-screen')!.classList.add('hidden');
-        document.getElementById('admin-panel')!.classList.remove('hidden');
-        loadStudents();
       }
 
       document.getElementById('logout-btn')?.addEventListener('click', () => {
@@ -332,7 +214,10 @@ import '../styles/global.css';
       });
 
       if (sessionStorage.getItem(SESSION_KEY) === 'ok') {
-        showPanel();
+        document.getElementById('admin-panel')!.classList.remove('hidden');
+        loadStudents();
+      } else {
+        location.replace('/');
       }
     </script>
   </body>
