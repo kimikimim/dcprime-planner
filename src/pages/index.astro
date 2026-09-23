@@ -146,7 +146,7 @@ import '../styles/global.css';
           </button>
           <button class="tab-btn" data-tab="study">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-            학습시간
+            학습인증
           </button>
           <button class="tab-btn" data-tab="goals">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" /><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" /><circle cx="12" cy="12" r="1.5" fill="currentColor" /></svg>
@@ -578,7 +578,8 @@ import '../styles/global.css';
         e.preventDefault();
         const session = getSession();
         if (!session) return;
-        const subject = (document.getElementById('daily-todo-subject') as HTMLInputElement).value.trim();
+        const subjectEl = document.getElementById('daily-todo-subject') as HTMLInputElement;
+        const subject = subjectEl.value.trim();
         const contentEl = document.getElementById('daily-todo-content') as HTMLInputElement;
         const content = contentEl.value.trim();
         if (!content) return;
@@ -589,6 +590,7 @@ import '../styles/global.css';
           subject: subject || null,
           content,
         });
+        subjectEl.value = '';
         contentEl.value = '';
         loadTodos();
       });
@@ -597,7 +599,8 @@ import '../styles/global.css';
         e.preventDefault();
         const session = getSession();
         if (!session) return;
-        const subject = (document.getElementById('weekly-todo-subject') as HTMLInputElement).value.trim();
+        const subjectEl = document.getElementById('weekly-todo-subject') as HTMLInputElement;
+        const subject = subjectEl.value.trim();
         const contentEl = document.getElementById('weekly-todo-content') as HTMLInputElement;
         const content = contentEl.value.trim();
         if (!content) return;
@@ -608,6 +611,7 @@ import '../styles/global.css';
           subject: subject || null,
           content,
         });
+        subjectEl.value = '';
         contentEl.value = '';
         loadTodos();
       });
